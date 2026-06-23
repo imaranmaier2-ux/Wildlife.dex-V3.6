@@ -1,29 +1,69 @@
 <!DOCTYPE html>
-<html>
-<body style="background:black; color:white; font-family:sans-serif;">
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wildlife Dex</title>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: #fff; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        #camera-container { width: 100%; max-width: 500px; background: #000; }
+        #camera-feed { width: 100%; display: block; }
+        #btn-scan { width: 100%; padding: 20px; background: #007aff; color: white; border: none; font-size: 18px; font-weight: bold; }
+        #result-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; margin-bottom: 20px; }
+        .overlay-btn { width: 100%; padding: 15px; margin: 5px 0; border: none; border-radius: 8px; font-weight: bold; }
+    </style>
+</head>
+<body>
 
-    <h1>DEBUGGER</h1>
-    <div id="debug-log" style="color:yellow; border:1px solid white; padding:10px; margin-bottom:10px;">Starting...</div>
-    
-    <video id="vid" autoplay playsinline style="width:100%"></video>
-    <button id="btn" style="width:100%; padding:20px; font-size:20px;">TEST SCAN</button>
+    <div id="camera-container">
+        <video id="camera-feed" autoplay playsinline></video>
+        <canvas id="snapshot-canvas" style="display: none;"></canvas>
+    </div>
+    <button id="btn-scan">🔍 Scan Wildlife</button>
+
+    <div id="result-overlay">
+        <div class="card">
+            <h2 id="res-name">Analyzing...</h2>
+            <p id="res-fact">Identifying species...</p>
+            <button id="btn-log-dex" class="overlay-btn">＋ Register Entry</button>
+            <button id="btn-close-card" class="overlay-btn" style="background:#333; color:#fff;">Dismiss</button>
+        </div>
+    </div>
 
     <script>
-        const log = document.getElementById('debug-log');
-        log.innerText = "Script Loaded.";
+        const video = document.getElementById('camera-feed');
+        const canvas = document.getElementById('snapshot-canvas');
+        let currentScan = null;
 
-        navigator.mediaDevices.getUserMedia({ video: true })
-        .then(stream => {
-            document.getElementById('vid').srcObject = stream;
-            log.innerText = "Camera Connected.";
-        })
-        .catch(err => {
-            log.innerText = "CAMERA ERROR: " + err.message;
-        });
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(stream => { video.srcObject = stream; })
+            .catch(err => alert("Camera error: " + err.message));
 
-        document.getElementById('btn').onclick = () => {
-            log.innerText = "Button clicked! Attempting scan...";
-            alert("Button Clicked Successfully");
+        document.getElementById('btn-scan').onclick = () => {
+            const ctx = canvas.getContext('2d');
+            canvas.width = 400;
+            canvas.height = video.videoHeight * (400 / video.videoWidth);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            document.getElementById('result-overlay').style.display = "flex";
+            
+            // Simulating AI response
+            currentScan = { name: "Red-bellied Woodpecker", fact: "Common forest bird.", image: canvas.toDataURL('image/jpeg', 0.5) };
+            document.getElementById('res-name').innerText = currentScan.name;
+            document.getElementById('res-fact').innerText = currentScan.fact;
+        };
+
+        document.getElementById('btn-log-dex').onclick = () => {
+            let entries = JSON.parse(localStorage.getItem('dex') || '[]');
+            entries.unshift(currentScan);
+            localStorage.setItem('dex', JSON.stringify(entries));
+            alert("Entry Saved!");
+            document.getElementById('result-overlay').style.display = "none";
+        };
+
+        document.getElementById('btn-close-card').onclick = () => {
+            document.getElementById('result-overlay').style.display = "none";
         };
     </script>
 </body>
