@@ -1,104 +1,746 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>W.G. JONES // PRO-DEX</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { width: 100vw; height: 100vh; background: #d2b48c; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Not Boring Camera</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-        /* The Main Body Frame */
-        .camera-body {
-            display: grid;
-            grid-template-columns: 100px 1fr 100px;
-            gap: 20px;
-            width: 95vw; height: 85vh;
-            padding: 20px;
-            background: #e6cba9;
-            border-radius: 40px;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
-        }
+    body {
+      font-family: 'Courier New', monospace;
+      background: #1a1a1a;
+      min-height: 100dvh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 12px;
+      overflow: hidden;
+    }
 
-        /* Viewport Styling */
-        .viewport-wrapper {
-            background: #000;
-            border-radius: 20px;
-            overflow: hidden;
-            position: relative;
-            border: 8px solid #c4a984;
-        }
+    /* === CAMERA BODY === */
+    .camera {
+      background: linear-gradient(145deg, #d4c4a8 0%, #c9b896 50%, #baa882 100%);
+      border-radius: 24px;
+      padding: 16px;
+      box-shadow: 
+        0 8px 32px rgba(0,0,0,0.4),
+        inset 0 2px 0 rgba(255,255,255,0.3),
+        inset 0 -2px 4px rgba(0,0,0,0.1);
+      max-width: 420px;
+      width: 100%;
+      position: relative;
+    }
 
-        #live-video {
-            width: 100%; height: 100%;
-            object-fit: cover; /* Locks aspect ratio */
-        }
+    /* Top strip with brand and indicator */
+    .camera-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px 16px;
+    }
 
-        /* Buttons & Dials */
-        .control-panel { display: flex; flex-direction: column; gap: 20px; align-items: center; }
-        .dial { width: 80px; height: 80px; background: #bba689; border-radius: 50%; box-shadow: 0 4px 0 #9e8b70; }
-        .red-button { width: 100px; height: 100px; background: #ff3e3e; border-radius: 50%; border: none; cursor: pointer; }
-        .btn-small { width: 50px; height: 50px; border-radius: 15px; border: none; background: #c4a984; }
+    .brand {
+      font-weight: bold;
+      font-size: 14px;
+      color: #5a4a3a;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
 
-        /* Pokedex Gallery Overlay */
-        #gallery-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: #d2b48c; z-index: 999; display: none; padding: 40px;
-        }
-        .polaroid { background: white; padding: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transform: rotate(-2deg); }
-        .polaroid img { width: 200px; height: 200px; object-fit: cover; }
-    </style>
+    .indicator {
+      width: 12px;
+      height: 12px;
+      background: #2a2a2a;
+      border-radius: 50%;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    .indicator.active::after {
+      content: '';
+      position: absolute;
+      inset: 2px;
+      background: #4ade80;
+      border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* === VIEWFINDER === */
+    .viewfinder-container {
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 8px;
+      box-shadow: 
+        inset 0 4px 12px rgba(0,0,0,0.6),
+        0 1px 0 rgba(255,255,255,0.1);
+    }
+
+    .viewfinder {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    #video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(1); /* No mirror for rear camera */
+    }
+
+    /* Corner frame marks */
+    .viewfinder::before,
+    .viewfinder::after {
+      content: '';
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border: 2px solid rgba(255,255,255,0.4);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .viewfinder::before {
+      top: 12px;
+      left: 12px;
+      border-right: none;
+      border-bottom: none;
+    }
+
+    .viewfinder::after {
+      bottom: 12px;
+      right: 12px;
+      border-left: none;
+      border-top: none;
+    }
+
+    /* Capture flash overlay */
+    .flash {
+      position: absolute;
+      inset: 0;
+      background: white;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .flash.active {
+      animation: flash 0.15s ease-out;
+    }
+
+    @keyframes flash {
+      0% { opacity: 0.9; }
+      100% { opacity: 0; }
+    }
+
+    /* Preview thumbnail */
+    .preview-thumb {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      width: 56px;
+      height: 56px;
+      border-radius: 8px;
+      border: 2px solid white;
+      overflow: hidden;
+      cursor: pointer;
+      z-index: 5;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      opacity: 0;
+      transform: scale(0.8);
+      transition: all 0.3s ease;
+    }
+
+    .preview-thumb.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .preview-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* === CONTROL STRIP === */
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 8px 8px;
+      gap: 16px;
+    }
+
+    /* Dials */
+    .dial {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 
+        0 3px 8px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.1);
+      cursor: pointer;
+      transition: transform 0.2s;
+      position: relative;
+    }
+
+    .dial::before {
+      content: '';
+      width: 4px;
+      height: 16px;
+      background: #888;
+      border-radius: 2px;
+      position: absolute;
+      top: 6px;
+    }
+
+    .dial:active {
+      transform: scale(0.95);
+    }
+
+    .dial-label {
+      font-size: 9px;
+      color: #5a4a3a;
+      text-align: center;
+      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .dial-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Shutter Button */
+    .shutter-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .shutter {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(145deg, #ef4444, #dc2626);
+      border: 4px solid #fef2f2;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 
+        0 4px 16px rgba(220,38,38,0.4),
+        inset 0 2px 0 rgba(255,255,255,0.3),
+        inset 0 -2px 4px rgba(0,0,0,0.2);
+      transition: all 0.1s;
+      position: relative;
+    }
+
+    .shutter:hover {
+      background: linear-gradient(145deg, #f87171, #ef4444);
+    }
+
+    .shutter:active {
+      transform: scale(0.92);
+      box-shadow: 
+        0 2px 8px rgba(220,38,38,0.4),
+        inset 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .shutter:disabled {
+      background: linear-gradient(145deg, #9ca3af, #6b7280);
+      cursor: not-allowed;
+    }
+
+    /* === GALLERY (DEX) === */
+    .gallery-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.95);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .gallery-overlay.open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .gallery-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid #333;
+    }
+
+    .gallery-title {
+      font-size: 18px;
+      color: #d4c4a8;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    .close-btn {
+      width: 40px;
+      height: 40px;
+      background: none;
+      border: 2px solid #666;
+      border-radius: 50%;
+      color: #999;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .close-btn:hover {
+      border-color: #d4c4a8;
+      color: #d4c4a8;
+    }
+
+    .gallery-grid {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 16px;
+      align-content: start;
+    }
+
+    .polaroid {
+      background: #fafafa;
+      padding: 8px 8px 32px;
+      border-radius: 2px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transform: rotate(var(--rotation, 0deg));
+      transition: transform 0.3s ease;
+      cursor: pointer;
+    }
+
+    .polaroid:hover {
+      transform: rotate(0deg) scale(1.05);
+      z-index: 10;
+    }
+
+    .polaroid img {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+      display: block;
+    }
+
+    .polaroid-date {
+      font-size: 10px;
+      color: #888;
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      color: #666;
+      padding: 60px 20px;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    /* === LIGHTBOX === */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.98);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .lightbox.open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .lightbox img {
+      max-width: 90%;
+      max-height: 70vh;
+      border-radius: 4px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+
+    .lightbox-actions {
+      display: flex;
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .lightbox-btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .lightbox-btn.download {
+      background: #d4c4a8;
+      color: #2a2a2a;
+    }
+
+    .lightbox-btn.delete {
+      background: #3a3a3a;
+      color: #ef4444;
+    }
+
+    .lightbox-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Status toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #2a2a2a;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 24px;
+      font-size: 14px;
+      z-index: 300;
+      transition: transform 0.3s ease;
+    }
+
+    .toast.visible {
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
 </head>
 <body>
-
-    <div id="gallery-overlay">
-        <button onclick="this.parentElement.style.display='none'">EXIT DEX</button>
-        <div id="gallery-grid" style="display:flex; gap:20px; flex-wrap:wrap; margin-top:30px;"></div>
+  <div class="camera">
+    <!-- Top strip -->
+    <div class="camera-top">
+      <span class="brand">NotBoring</span>
+      <div class="indicator" id="indicator"></div>
     </div>
 
-    <div class="camera-body">
-        <div class="control-panel">
-            <div class="dial"></div>
-            <button class="btn-small" onclick="document.getElementById('gallery-overlay').style.display='block'">📁</button>
+    <!-- Viewfinder -->
+    <div class="viewfinder-container">
+      <div class="viewfinder">
+        <video id="video" autoplay playsinline muted></video>
+        <div class="flash" id="flash"></div>
+        <div class="preview-thumb" id="previewThumb">
+          <img id="previewImg" src="" alt="Last capture">
         </div>
-
-        <div class="viewport-wrapper">
-            <video id="live-video" autoplay playsinline muted></video>
-        </div>
-
-        <div class="control-panel">
-            <div class="dial"></div>
-            <button class="red-button" id="shutter"></button>
-        </div>
+      </div>
     </div>
 
-    <script>
-        const video = document.getElementById('live-video');
-        let gallery = JSON.parse(localStorage.getItem('pokedex_data')) || [];
+    <!-- Controls -->
+    <div class="controls">
+      <div class="dial-group">
+        <div class="dial" id="dialISO" data-value="0"></div>
+        <span class="dial-label">ISO</span>
+      </div>
 
-        // Camera feed
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(s => video.srcObject = s);
+      <div class="shutter-container">
+        <button class="shutter" id="shutter" disabled></button>
+      </div>
 
-        // Capture Logic (Polaroid Creation)
-        document.getElementById('shutter').addEventListener('click', () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 300; canvas.height = 300;
-            canvas.getContext('2d').drawImage(video, 0, 0, 300, 300);
-            
-            const polaroid = { img: canvas.toDataURL('image/png'), date: new Date().toLocaleDateString() };
-            gallery.push(polaroid);
-            localStorage.setItem('pokedex_data', JSON.stringify(gallery));
-            renderGallery();
+      <div class="dial-group">
+        <div class="dial" id="dialGallery"></div>
+        <span class="dial-label">DEX</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gallery Overlay -->
+  <div class="gallery-overlay" id="gallery">
+    <div class="gallery-header">
+      <span class="gallery-title">Photo Dex</span>
+      <button class="close-btn" id="closeGallery">&times;</button>
+    </div>
+    <div class="gallery-grid" id="galleryGrid"></div>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox">
+    <img id="lightboxImg" src="" alt="Full size">
+    <div class="lightbox-actions">
+      <button class="lightbox-btn download" id="downloadBtn">Download</button>
+      <button class="lightbox-btn delete" id="deleteBtn">Delete</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Hidden canvas for capture -->
+  <canvas id="canvas" style="display:none;"></canvas>
+
+  <script>
+    const STORAGE_KEY = 'notboring_photos';
+
+    // Elements
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const shutter = document.getElementById('shutter');
+    const flash = document.getElementById('flash');
+    const indicator = document.getElementById('indicator');
+    const previewThumb = document.getElementById('previewThumb');
+    const previewImg = document.getElementById('previewImg');
+    const gallery = document.getElementById('gallery');
+    const galleryGrid = document.getElementById('galleryGrid');
+    const dialGallery = document.getElementById('dialGallery');
+    const closeGallery = document.getElementById('closeGallery');
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightboxImg');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const toast = document.getElementById('toast');
+
+    let currentPhotoId = null;
+    let stream = null;
+
+    // Initialize camera
+    async function initCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920 },
+            height: { ideal: 1440 }
+          },
+          audio: false
         });
 
-        function renderGallery() {
-            document.getElementById('gallery-grid').innerHTML = gallery.map(item => `
-                <div class="polaroid">
-                    <img src="${item.img}">
-                    <p style="color:black; font-family:monospace;">ID: ${item.date}</p>
-                </div>
-            `).join('');
-        }
-    </script>
+        video.srcObject = stream;
+        await video.play();
+
+        // Set canvas dimensions to match video
+        const track = stream.getVideoTracks()[0];
+        const settings = track.getSettings();
+        canvas.width = settings.width || 1920;
+        canvas.height = settings.height || 1440;
+
+        indicator.classList.add('active');
+        shutter.disabled = false;
+        
+        // Load last photo preview
+        updatePreviewThumb();
+
+      } catch (err) {
+        console.error('Camera error:', err);
+        showToast('Camera access denied');
+      }
+    }
+
+    // Capture photo
+    function capturePhoto() {
+      // Flash effect
+      flash.classList.add('active');
+      setTimeout(() => flash.classList.remove('active'), 150);
+
+      // Draw to canvas
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+      // Store photo
+      const photos = getPhotos();
+      const photo = {
+        id: Date.now(),
+        data: dataUrl,
+        timestamp: new Date().toISOString()
+      };
+      photos.unshift(photo);
+      savePhotos(photos);
+
+      // Update preview
+      updatePreviewThumb();
+      showToast('Photo captured!');
+    }
+
+    // Storage helpers
+    function getPhotos() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      } catch {
+        return [];
+      }
+    }
+
+    function savePhotos(photos) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(photos));
+      } catch (e) {
+        showToast('Storage full - delete old photos');
+      }
+    }
+
+    function updatePreviewThumb() {
+      const photos = getPhotos();
+      if (photos.length > 0) {
+        previewImg.src = photos[0].data;
+        previewThumb.classList.add('visible');
+      } else {
+        previewThumb.classList.remove('visible');
+      }
+    }
+
+    // Gallery functions
+    function openGallery() {
+      renderGallery();
+      gallery.classList.add('open');
+    }
+
+    function renderGallery() {
+      const photos = getPhotos();
+
+      if (photos.length === 0) {
+        galleryGrid.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📷</div>
+            <p>No photos yet.<br>Start capturing!</p>
+          </div>
+        `;
+        return;
+      }
+
+      galleryGrid.innerHTML = photos.map((photo, i) => {
+        const rotation = (Math.random() - 0.5) * 6;
+        const date = new Date(photo.timestamp).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric'
+        });
+
+        return `
+          <div class="polaroid" style="--rotation: ${rotation}deg" data-id="${photo.id}">
+            <img src="${photo.data}" alt="Photo ${i + 1}">
+            <div class="polaroid-date">${date}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Lightbox functions
+    function openLightbox(photoId) {
+      const photos = getPhotos();
+      const photo = photos.find(p => p.id === photoId);
+      if (!photo) return;
+
+      currentPhotoId = photoId;
+      lightboxImg.src = photo.data;
+      lightbox.classList.add('open');
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove('open');
+      currentPhotoId = null;
+    }
+
+    function downloadPhoto() {
+      if (!currentPhotoId) return;
+      const photos = getPhotos();
+      const photo = photos.find(p => p.id === currentPhotoId);
+      if (!photo) return;
+
+      const link = document.createElement('a');
+      link.href = photo.data;
+      link.download = `notboring_${currentPhotoId}.jpg`;
+      link.click();
+      showToast('Downloading...');
+    }
+
+    function deletePhoto() {
+      if (!currentPhotoId) return;
+      let photos = getPhotos();
+      photos = photos.filter(p => p.id !== currentPhotoId);
+      savePhotos(photos);
+
+      closeLightbox();
+      renderGallery();
+      updatePreviewThumb();
+      showToast('Photo deleted');
+    }
+
+    // Toast notification
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('visible');
+      setTimeout(() => toast.classList.remove('visible'), 2000);
+    }
+
+    // Event listeners
+    shutter.addEventListener('click', capturePhoto);
+
+    dialGallery.addEventListener('click', openGallery);
+    closeGallery.addEventListener('click', () => gallery.classList.remove('open'));
+
+    previewThumb.addEventListener('click', openGallery);
+
+    galleryGrid.addEventListener('click', (e) => {
+      const polaroid = e.target.closest('.polaroid');
+      if (polaroid) {
+        openLightbox(Number(polaroid.dataset.id));
+      }
+    });
+
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox) closeLightbox();
+    });
+
+    downloadBtn.addEventListener('click', downloadPhoto);
+    deleteBtn.addEventListener('click', deletePhoto);
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !shutter.disabled && !gallery.classList.contains('open')) {
+        e.preventDefault();
+        capturePhoto();
+      }
+      if (e.code === 'Escape') {
+        if (lightbox.classList.contains('open')) closeLightbox();
+        else if (gallery.classList.contains('open')) gallery.classList.remove('open');
+      }
+    });
+
+    // Start
+    initCamera();
+  </script>
 </body>
 </html>
