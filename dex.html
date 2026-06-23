@@ -153,9 +153,20 @@
 
         // --- 📊 SCANNER ENGINE ---
         document.getElementById('btn-scan').addEventListener('click', function() {
-            // 1. Setup Canvas & Take Picture
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            // iOS Fix: Ensure the video actually has dimensions before snapping
+            if (video.videoWidth === 0 || video.videoHeight === 0) {
+                alert("Camera still initializing, please try again in a second!");
+                return;
+            }
+
+            // 1. Setup Canvas & Shrink Image to Thumbnail Size to prevent 5MB storage crash
+            const MAX_WIDTH = 400; // Force the image to be small
+            const scale = MAX_WIDTH / video.videoWidth;
+            
+            canvas.width = MAX_WIDTH;
+            canvas.height = video.videoHeight * scale;
+            
+            // Draw the video frame onto the smaller canvas
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
             // 2. Show Overlay UI (Loading state)
@@ -228,7 +239,7 @@
                 }, 1000);
 
             } catch (err) {
-                alert("SAVE REJECTED BY BROWSER!\n\nReason: " + err.message + "\n\nIf it says 'SecurityError', your browser is blocking data storage.");
+                alert("SAVE REJECTED BY BROWSER!\n\nReason: " + err.message + "\n\nIf it says 'QuotaExceededError', you need to clear your Safari website data for this site in your phone settings.");
             }
         });
 
@@ -250,25 +261,3 @@
 
             if (entries.length === 0) {
                 container.innerHTML = "<p style='color:#888;'>No wildlife logged yet. Go scan something!</p>";
-                return;
-            }
-
-            entries.forEach(entry => {
-                const div = document.createElement('div');
-                div.className = 'dex-entry';
-                div.innerHTML = `
-                    <img src="${entry.image}" alt="${entry.name}">
-                    <div class="dex-info">
-                        <h3>${entry.name}</h3>
-                        <p>${entry.science}</p>
-                    </div>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        // Run gallery render on initial page load
-        renderGallery();
-    </script>
-</body>
-</html>
