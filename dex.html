@@ -5,43 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>W.G. JONES // PRO-DEX</title>
     <style>
-        /* 1. Reset to kill all margins/padding */
-        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: none; }
-        
-        /* 2. Lock the background to your beige color */
-        body { 
-            width: 100vw; height: 100vh; 
-            background: #d2b48c; 
-            overflow: hidden; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* Force the body to cover the entire hardware screen */
+        body {
+            position: fixed;
+            width: 100vw; height: 100vh;
+            background: #d2b48c;
+            overflow: hidden;
         }
 
-        /* 3. The Camera Body: Locked Horizontal */
+        /* This container forces the Landscape shape */
         .camera-container {
-            width: 95vw; height: 85vh;
-            background: #e6cba9;
-            border-radius: 40px;
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
             display: flex;
             padding: 20px;
             gap: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            flex-direction: row; /* Forces horizontal layout */
+            background: #e6cba9;
         }
 
-        /* 4. Sidebars: Locked width */
-        .left-panel { width: 120px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
-        .right-panel { width: 120px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .left-panel { width: 15%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+        .right-panel { width: 15%; display: flex; flex-direction: column; justify-content: center; align-items: center; }
 
-        /* 5. Center Viewport: Locked to expand */
         .viewport-center {
             flex-grow: 1;
             background: #000;
             border-radius: 25px;
             border: 8px solid #c4a984;
             overflow: hidden;
-            position: relative;
         }
 
         #live-feed {
@@ -49,66 +42,26 @@
             object-fit: cover;
         }
 
-        /* 6. Buttons: Styled for interaction */
-        .btn-shutter { width: 90px; height: 90px; background: #ff3e3e; border-radius: 50%; border: none; box-shadow: 0 5px 0 #b32a2a; cursor: pointer; }
-        .btn-folder { width: 60px; height: 60px; background: #c4a984; border-radius: 20px; border: none; cursor: pointer; }
-
-        /* 7. The DEX Gallery Overlay */
-        #dex-overlay { 
-            position: fixed; inset: 0; background: #d2b48c; z-index: 999; display: none; padding: 40px; 
-            overflow-y: auto; text-align: center;
-        }
+        .btn-shutter { width: 80px; height: 80px; background: #ff3e3e; border-radius: 50%; border: none; }
+        .btn-folder { width: 50px; height: 50px; background: #c4a984; border-radius: 15px; border: none; }
     </style>
 </head>
 <body>
-
-    <div id="dex-overlay">
-        <button onclick="document.getElementById('dex-overlay').style.display='none'" style="padding:15px;">CLOSE DEX</button>
-        <div id="dex-list" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:20px; margin-top:30px;"></div>
-    </div>
-
     <div class="camera-container">
         <div class="left-panel">
-            <button class="btn-folder" onclick="document.getElementById('dex-overlay').style.display='block'">📁</button>
+            <button class="btn-folder" onclick="alert('DEX OPEN')">📁</button>
         </div>
-        
         <div class="viewport-center">
             <video id="live-feed" autoplay playsinline muted></video>
         </div>
-
         <div class="right-panel">
             <button class="btn-shutter" id="shutter"></button>
         </div>
     </div>
-
     <script>
         const video = document.getElementById('live-feed');
-        let dex = JSON.parse(localStorage.getItem('my_dex_memory')) || [];
-
-        // Camera Logic
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
             .then(s => video.srcObject = s);
-
-        // Capture Logic
-        document.getElementById('shutter').addEventListener('click', () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 600; canvas.height = 600;
-            canvas.getContext('2d').drawImage(video, 0, 0, 600, 600);
-            
-            const entry = { img: canvas.toDataURL('image/png'), time: new Date().toLocaleTimeString() };
-            dex.push(entry);
-            localStorage.setItem('my_dex_memory', JSON.stringify(dex));
-            updateDex();
-        });
-
-        function updateDex() {
-            document.getElementById('dex-list').innerHTML = dex.map(item => `
-                <div style="background:white; padding:10px; border-radius:10px;">
-                    <img src="${item.img}" style="width:100%; border-radius:5px;">
-                    <p>${item.time}</p>
-                </div>
-            `).join('');
-        }
     </script>
 </body>
 </html>
