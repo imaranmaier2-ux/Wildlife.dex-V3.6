@@ -1,444 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1.0, maximum-scale=1"
-/>
-<title>Wild Dex Camera</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>W.G. JONES // PRO-DEX</title>
+    <style>
+        /* CSS RESET */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { width: 100vw; height: 100vh; background: #c6b595; overflow: hidden; display: flex; justify-content: center; align-items: center; }
 
-<style>
-*{
-  box-sizing:border-box;
-  margin:0;
-  padding:0;
-}
+        /* CAMERA BODY SHELL */
+        .camera-body {
+            display: flex;
+            width: 98vw; height: 90vh;
+            background: #d4c2a0;
+            border-radius: 50px;
+            padding: 20px;
+            gap: 20px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+        }
 
-body{
-  background:#1a1a1a;
-  font-family:Arial, sans-serif;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  min-height:100vh;
-}
+        /* SIDEBARS: Fixed size so they never shrink */
+        .sidebar { min-width: 120px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
 
-.camera-shell{
-  width:min(95vw,900px);
-  height:min(90vh,520px);
-  background:#d7c0a3;
-  border-radius:28px;
-  padding:20px;
-  display:grid;
-  grid-template-columns:110px 1fr 110px;
-  gap:16px;
-  box-shadow:
-    inset 0 0 0 4px #b89672,
-    0 15px 50px rgba(0,0,0,.45);
-}
+        /* VIEWPORT: Locked aspect ratio */
+        .viewport {
+            flex-grow: 1;
+            background: #000;
+            border-radius: 30px;
+            overflow: hidden;
+            border: 10px solid #a89470;
+            position: relative;
+        }
 
-.left-panel,
-.right-panel{
-  display:flex;
-  flex-direction:column;
-  justify-content:space-between;
-  align-items:center;
-}
+        #feed { width: 100%; height: 100%; object-fit: cover; }
 
-.dial{
-  width:70px;
-  height:70px;
-  border-radius:50%;
-  background:#2a2a2a;
-  box-shadow: inset 0 0 10px black;
-}
+        /* FUNCTIONAL BUTTONS */
+        .dial { width: 90px; height: 90px; background: #b8a685; border-radius: 50%; box-shadow: inset 0 -5px 5px rgba(0,0,0,0.2); }
+        .red-btn { width: 110px; height: 110px; background: #e83a3a; border-radius: 50%; border: 5px solid #fff; cursor: pointer; }
+        .btn-dex { width: 60px; height: 60px; background: #a89470; border-radius: 20px; border: none; font-size: 24px; }
 
-.speaker{
-  width:80px;
-  height:130px;
-  border-radius:10px;
-  background:linear-gradient(#bbb,#777);
-  position:relative;
-}
-
-.speaker::before{
-  content:"";
-  position:absolute;
-  inset:10px;
-  background:repeating-linear-gradient(
-    to bottom,
-    #ddd 0px,
-    #ddd 3px,
-    #999 6px,
-    #999 10px
-  );
-}
-
-.small-buttons{
-  display:flex;
-  gap:12px;
-}
-
-.small-btn{
-  width:50px;
-  height:50px;
-  border-radius:50%;
-  background:#333;
-  color:white;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  cursor:pointer;
-  font-weight:bold;
-}
-
-.center-panel{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-}
-
-.viewfinder{
-  width:100%;
-  aspect-ratio:16/9;
-  position:relative;
-  overflow:hidden;
-  border-radius:12px;
-  background:black;
-  border:4px solid #bca080;
-}
-
-video{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-
-.overlay{
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  color:white;
-}
-
-.hud-top{
-  position:absolute;
-  top:16px;
-  width:100%;
-  text-align:center;
-}
-
-.hud-bottom{
-  position:absolute;
-  bottom:16px;
-  width:100%;
-  display:flex;
-  justify-content:space-around;
-  font-size:14px;
-}
-
-.capture-btn{
-  width:120px;
-  height:120px;
-  border-radius:50%;
-  background:#ff322d;
-  border:none;
-  cursor:pointer;
-  box-shadow: inset 0 0 15px rgba(255,255,255,.2);
-}
-
-.capture-btn:active{
-  transform:scale(.95);
-}
-
-.gallery-btn{
-  width:60px;
-  height:60px;
-  border-radius:50%;
-  background:#333;
-  color:white;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-}
-
-.knob{
-  width:80px;
-  height:40px;
-  background:#c8b29a;
-  border-radius:20px;
-}
-
-canvas{
-  display:none;
-}
-
-.dex-modal{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.85);
-  display:none;
-  padding:20px;
-  overflow:auto;
-}
-
-.dex-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
-  gap:20px;
-}
-
-.card{
-  background:linear-gradient(#fbe89c,#f1cb4d);
-  border:8px solid #cfa63d;
-  border-radius:16px;
-  padding:14px;
-  box-shadow:0 10px 20px rgba(0,0,0,.3);
-}
-
-.card h2{
-  margin-bottom:8px;
-}
-
-.card img{
-  width:100%;
-  height:220px;
-  object-fit:cover;
-  border:4px solid #888;
-  border-radius:8px;
-}
-
-.facts{
-  margin-top:10px;
-  font-size:14px;
-  line-height:1.5;
-}
-
-.close-dex{
-  color:white;
-  font-size:28px;
-  cursor:pointer;
-  margin-bottom:20px;
-}
-  </style>
+        /* DEX GALLERY */
+        #dex-overlay { position: fixed; inset: 0; background: #c6b595; z-index: 999; display: none; padding: 40px; overflow-y: auto; }
+        .polaroid-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 30px; }
+        .card { background: white; padding: 15px; border-radius: 5px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+    </style>
 </head>
 <body>
 
-<div class="camera-shell">
-
-  <div class="left-panel">
-    <div class="dial"></div>
-    <div class="speaker"></div>
-
-    <div class="small-buttons">
-      <div class="small-btn" id="randomAnimal">?</div>
-      <div class="small-btn">M</div>
+    <div id="dex-overlay">
+        <button onclick="this.parentElement.style.display='none'" style="padding:10px;">RETURN TO CAMERA</button>
+        <div id="dex-list" class="polaroid-grid" style="margin-top:30px;"></div>
     </div>
-  </div>
 
-  <div class="center-panel">
-    <div class="viewfinder">
-      <video id="video" autoplay playsinline></video>
-
-      <div class="overlay">
-        <div class="hud-top">
-          <div>SHUTTER SPEED</div>
-          <h2>1/210</h2>
+    <div class="camera-body">
+        <div class="sidebar">
+            <div class="dial"></div>
+            <button class="btn-dex" onclick="document.getElementById('dex-overlay').style.display='block'">📁</button>
+        </div>
+        
+        <div class="viewport">
+            <video id="feed" autoplay playsinline muted></video>
         </div>
 
-        <div class="hud-bottom">
-          <span>1/210</span>
-          <span>f 1.8</span>
-          <span>ISO 400</span>
+        <div class="sidebar">
+            <div class="dial"></div>
+            <button class="red-btn" id="shutter"></button>
         </div>
-      </div>
     </div>
-  </div>
 
-  <div class="right-panel">
-    <div class="knob"></div>
+    <script>
+        const feed = document.getElementById('feed');
+        let dex = JSON.parse(localStorage.getItem('dex_data')) || [];
 
-    <button class="capture-btn" id="captureBtn">+</button>
+        // Camera init
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(s => feed.srcObject = s);
 
-    <div class="gallery-btn" id="openDex">
-      DEX
-    </div>
-  </div>
+        // Capture Polaroids
+        document.getElementById('shutter').addEventListener('click', () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 600; canvas.height = 600;
+            canvas.getContext('2d').drawImage(feed, 0, 0, 600, 600);
+            
+            dex.push({ img: canvas.toDataURL('image/png'), ts: new Date().toLocaleTimeString() });
+            localStorage.setItem('dex_data', JSON.stringify(dex));
+            updateDex();
+        });
 
-</div>
-
-<canvas id="canvas"></canvas>
-
-<div class="dex-modal" id="dexModal">
-  <div class="close-dex" id="closeDex">✕ Close Dex</div>
-  <div class="dex-grid" id="dexGrid"></div>
-</div>
-<script>
-const animalDatabase = {
-  deer: {
-    name: "White-tailed Deer",
-    facts: [
-      "Can run up to 30 mph",
-      "Communicate using tail signals",
-      "Excellent hearing"
-    ]
-  },
-  raccoon: {
-    name: "Raccoon",
-    facts: [
-      "Very intelligent",
-      "Excellent night vision",
-      "Can open containers"
-    ]
-  },
-  armadillo: {
-    name: "Armadillo",
-    facts: [
-      "Has protective armor",
-      "Can jump straight up",
-      "Excellent diggers"
-    ]
-  },
-  owl: {
-    name: "Barred Owl",
-    facts: [
-      "Flies silently",
-      "Can rotate head 270°",
-      "Great nighttime hunter"
-    ]
-  },
-  squirrel: {
-    name: "Gray Squirrel",
-    facts: [
-      "Can leap 10x body length",
-      "Hide food for winter",
-      "Use tail for balance"
-    ]
-  }
-};
-
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const captureBtn = document.getElementById("captureBtn");
-const dexGrid = document.getElementById("dexGrid");
-const dexModal = document.getElementById("dexModal");
-const openDex = document.getElementById("openDex");
-const closeDex = document.getElementById("closeDex");
-const randomAnimal = document.getElementById("randomAnimal");
-  function getStoredDex() {
-  return JSON.parse(localStorage.getItem("wilddex") || "[]");
-}
-
-function saveDex(entries) {
-  localStorage.setItem("wilddex", JSON.stringify(entries));
-}
-
-function getRandomAnimalKey() {
-  const keys = Object.keys(animalDatabase);
-  return keys[Math.floor(Math.random() * keys.length)];
-}
-
-let currentAnimal = getRandomAnimalKey();
-
-randomAnimal.addEventListener("click", () => {
-  currentAnimal = getRandomAnimalKey();
-  alert("Current animal target: " + animalDatabase[currentAnimal].name);
-});
-
-async function startCamera() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { ideal: "environment" }
-      },
-      audio: false
-    });
-
-    video.srcObject = stream;
-  } catch (err) {
-    alert("Camera access failed: " + err.message);
-    console.error(err);
-  }
-}
-
-captureBtn.addEventListener("click", () => {
-  if (!video.videoWidth) return;
-
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(video, 0, 0);
-
-  const photo = canvas.toDataURL("image/jpeg", 0.9);
-
-  const dex = getStoredDex();
-
-  dex.push({
-    animalKey: currentAnimal,
-    image: photo,
-    capturedAt: Date.now()
-  });
-
-  saveDex(dex);
-  renderDex();
-
-  alert(
-    animalDatabase[currentAnimal].name +
-    " added to your Wild Dex!"
-  );
-});
-
-function renderDex() {
-  const dex = getStoredDex();
-
-  if (dex.length === 0) {
-    dexGrid.innerHTML = `
-      <div style="color:white;font-size:24px;">
-        No animals captured yet!
-      </div>
-    `;
-    return;
-  }
-
-  dexGrid.innerHTML = dex
-    .map(entry => {
-      const animal = animalDatabase[entry.animalKey];
-
-      return `
-        <div class="card">
-          <h2>${animal.name}</h2>
-
-          <img src="${entry.image}" alt="${animal.name}" />
-
-          <div class="facts">
-            <strong>Fun Facts:</strong>
-            <ul>
-              ${animal.facts
-                .map(fact => `<li>${fact}</li>`)
-                .join("")}
-            </ul>
-          </div>
-        </div>
-      `;
-    })
-    .join("");
-}
-
-openDex.addEventListener("click", () => {
-  renderDex();
-  dexModal.style.display = "block";
-});
-
-closeDex.addEventListener("click", () => {
-  dexModal.style.display = "none";
-});
-
-startCamera();
-renderDex();
-</script>
+        function updateDex() {
+            document.getElementById('dex-list').innerHTML = dex.map(item => `
+                <div class="card">
+                    <img src="${item.img}" style="width:100%; aspect-ratio:1/1;">
+                    <p style="text-align:center; margin-top:10px; font-family:sans-serif;">#${item.ts}</p>
+                </div>
+            `).join('');
+        }
+        updateDex();
+    </script>
 </body>
 </html>
