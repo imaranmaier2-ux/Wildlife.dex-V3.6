@@ -3,29 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CAM PRO // W.G. JONES</title>
+    <title>W.G. JONES // TACTILE CAM PRO</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { width: 100vw; height: 100vh; background: #000; overflow: hidden; display: flex; }
+        body, html { width: 100%; height: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
 
-        /* Left and Right Control Strips */
-        .sidebar { width: 100px; flex-shrink: 0; background: #121110; display: flex; flex-direction: column; align-items: center; justify-content: space-around; z-index: 10; }
-
-        /* The Viewfinder is now absolute to prevent flex-box from squishing it */
-        .panel-center { flex-grow: 1; position: relative; background: #000; overflow: hidden; }
-        
-        #embedded-live-video {
+        /* Fullscreen Viewfinder */
+        #viewfinder-container {
             position: absolute;
-            top: 50%; left: 50%;
-            width: 100%; height: 100%;
-            object-fit: cover; /* This makes it look like a real camera */
-            transform: translate(-50%, -50%);
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: #000;
+            overflow: hidden;
         }
 
-        .giant-shutter-red { width: 70px; height: 70px; background: #ff3b30; border-radius: 50%; border: none; }
-        .btn-gallery { width: 50px; height: 50px; background: #333; color: white; border-radius: 50%; border: none; }
+        #embedded-live-video {
+            width: 100%; height: 100%;
+            object-fit: cover; /* This is the fix for squishing */
+        }
 
-        #gallery-overlay { position: fixed; inset: 0; background: #000; z-index: 500; display: none; padding: 20px; color: white; overflow-y: auto; }
+        /* Control UI - Floating on top */
+        .ui-layer {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none; /* Let clicks pass through to video area if needed */
+        }
+
+        .side-panel {
+            width: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            pointer-events: auto;
+        }
+
+        button {
+            width: 70px; height: 70px;
+            border-radius: 50%; border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: white; font-weight: bold; cursor: pointer;
+            backdrop-filter: blur(5px);
+        }
+
+        #shutter-trigger { background: #ff3b30; }
+
+        /* Gallery */
+        #gallery-overlay {
+            position: fixed; inset: 0; background: #000; z-index: 999;
+            display: none; padding: 20px; color: white; overflow-y: auto;
+        }
         .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .gallery-item img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 10px; }
     </style>
@@ -33,41 +64,47 @@
 <body>
 
     <div id="gallery-overlay">
-        <button onclick="document.getElementById('gallery-overlay').style.display='none'" style="padding:10px; background:#333; color:white; border:none;">CLOSE</button>
+        <button onclick="document.getElementById('gallery-overlay').style.display='none'" style="width:100px; margin-bottom:20px;">CLOSE</button>
         <div class="gallery-grid" id="gallery-list"></div>
     </div>
 
-    <div class="sidebar">
-        <button class="btn-gallery" onclick="document.getElementById('gallery-overlay').style.display='block'">📁</button>
-    </div>
-    
-    <div class="panel-center">
+    <div id="viewfinder-container">
         <video id="embedded-live-video" autoplay playsinline muted></video>
     </div>
 
-    <div class="sidebar">
-        <button class="giant-shutter-red" id="shutter-trigger"></button>
+    <div class="ui-layer">
+        <div class="side-panel">
+            <button onclick="document.getElementById('gallery-overlay').style.display='block'">📁</button>
+        </div>
+        <div class="side-panel">
+            <button id="shutter-trigger"></button>
+        </div>
     </div>
 
     <script>
         const video = document.getElementById('embedded-live-video');
-        let galleryData = JSON.parse(localStorage.getItem('my_jones_gallery')) || [];
+        let gallery = JSON.parse(localStorage.getItem('my_jones_gallery')) || [];
 
+        // Camera Logic
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
             .then(s => video.srcObject = s);
 
+        // Snapshot Logic
         document.getElementById('shutter-trigger').addEventListener('click', () => {
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
-            galleryData.push({ img: canvas.toDataURL('image/png') });
-            localStorage.setItem('my_jones_gallery', JSON.stringify(galleryData));
+            
+            gallery.push({ img: canvas.toDataURL('image/png') });
+            localStorage.setItem('my_jones_gallery', JSON.stringify(gallery));
             renderGallery();
         });
 
         function renderGallery() {
-            document.getElementById('gallery-list').innerHTML = galleryData.map(i => `<div class="gallery-item"><img src="${i.img}"></div>`).join('');
+            document.getElementById('gallery-list').innerHTML = gallery.map(i => 
+                `<div class="gallery-item"><img src="${i.img}"></div>`
+            ).join('');
         }
         renderGallery();
     </script>
