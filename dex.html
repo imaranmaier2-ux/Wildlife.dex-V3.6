@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <title>WILDLIFE DEX // TACTILE CAM V3.7</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+
     <style>
         * {
             box-sizing: border-box;
@@ -391,12 +395,12 @@
 
                 <div class="hud-center-stats">
                     <div class="hud-ticks">▪ ▪ ▪ ▪ ▪ <span style="color:#ff3b30;">▪</span> ▪ ▪ ▪ ▪</div>
-                    <div class="hud-label" id="hud-stat-label">SHUTTER SPEED</div>
-                    <div class="hud-main-value" id="hud-stat-value">1/210</div>
+                    <div class="hud-label" id="hud-stat-label">AI CORE STATUS</div>
+                    <div class="hud-main-value" id="hud-stat-value">BOOTING...</div>
                 </div>
 
                 <div class="hud-bottom-bar">
-                    <div class="hud-pill-box" id="hud-lower-pill">♦ NATIVE LENS</div>
+                    <div class="hud-pill-box" id="hud-lower-pill">♦ INITIALIZING AI</div>
                     <div class="hud-inline-metrics">
                         <div>⚏ 18</div>
                         <div>☀ 5440K</div>
@@ -404,7 +408,7 @@
                     </div>
                 </div>
 
-                <input type="text" id="manual-text-input" class="manual-keyboard-override" placeholder="[ ENTER TARGET VALUES OVERRIDE ]">
+                <input type="text" id="manual-text-input" class="manual-keyboard-override" placeholder="[ AI OVERRIDE: TYPE SPECIES NAME ]">
 
                 <div class="hud-telemetry-overlay-card" id="result-overlay">
                     <div class="captured-polaroid-frame">
@@ -412,7 +416,7 @@
                     </div>
                     <div class="card-info-pane">
                         <div>
-                            <div class="card-header" id="res-header">Wildlife-dex V3.7 Diagnostic Stream</div>
+                            <div class="card-header" id="res-header">Wildlife-dex V3.7 Neural Scan</div>
                             <div class="card-title" id="res-name">Specimen Active</div>
                             <div class="card-sub" id="res-science">Taxonomy Branch</div>
                             <div class="card-body" id="res-fact">Processing data loops...</div>
@@ -461,6 +465,21 @@
         const viewportFrame = document.getElementById('viewport-frame');
 
         let currentScanPayload = null;
+        let aiModel = null;
+
+        // --- 🧠 INITIALIZE TENSORFLOW AI ---
+        async function loadAI() {
+            try {
+                aiModel = await mobilenet.load();
+                document.getElementById('hud-lower-pill').innerText = '♦ AI CORE ONLINE';
+                document.getElementById('hud-stat-value').innerText = 'READY';
+                document.getElementById('hud-stat-value').style.color = '#4cd964';
+            } catch (err) {
+                console.error("Failed to load AI Model", err);
+                document.getElementById('hud-lower-pill').innerText = '♦ AI OFFLINE';
+                document.getElementById('hud-stat-value').innerText = 'ERROR';
+            }
+        }
 
         function bootUpCameraLens() {
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -468,7 +487,10 @@
                     video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }, 
                     audio: false 
                 })
-                .then(stream => { video.srcObject = stream; })
+                .then(stream => { 
+                    video.srcObject = stream; 
+                    loadAI(); // Start loading AI after camera is ready
+                })
                 .catch(err => { console.log("Camera hardware alignment check.", err); });
             }
         }
@@ -500,7 +522,7 @@
             }
             
             video.style.transform = 'rotate(' + angle + 'deg) scale(' + rawScale + ')';
-            document.getElementById('hud-lower-pill').innerText = '♦ ' + angle + '° CALIBRATED';
+            if(aiModel) document.getElementById('hud-lower-pill').innerText = '♦ ' + angle + '° CALIBRATED';
         }
 
         window.addEventListener('resize', applyViewportTransforms);
@@ -526,10 +548,11 @@
         let currentStatIndex = 0;
         statWheel.addEventListener('click', function() {
             currentStatIndex = (currentStatIndex + 1) % 3;
-            const labels = ["SHUTTER SPEED", "EXPOSURE VALUE", "ISO OPTICS"];
-            const values = ["1/210", "EV -0.7", "ISO 64"];
+            const labels = ["AI CORE STATUS", "EXPOSURE VALUE", "ISO OPTICS"];
+            const values = [aiModel ? "READY" : "LOADING", "EV -0.7", "ISO 64"];
             document.getElementById('hud-stat-label').innerText = labels[currentStatIndex];
             document.getElementById('hud-stat-value').innerText = values[currentStatIndex];
+            document.getElementById('hud-stat-value').style.color = (currentStatIndex === 0 && aiModel) ? '#4cd964' : '#fff';
             statGraphic.style.transform = 'rotateY(' + (currentStatIndex * 60) + 'deg)';
         });
 
@@ -541,8 +564,8 @@
             document.getElementById('manual-text-input').style.display = isModeActive ? "block" : "none";
         });
 
-        // --- 📊 SCANNER ANALYSIS ENGINE ---
-        document.getElementById('shutter-trigger').addEventListener('click', function() {
+        // --- 📊 AI SCANNER ANALYSIS ENGINE ---
+        document.getElementById('shutter-trigger').addEventListener('click', async function() {
             const canvas = document.getElementById('canvas-snapshot-output');
             const ctx = canvas.getContext('2d');
             let angle = targetAngles[currentAngleIndex];
@@ -565,41 +588,44 @@
             } else {
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             }
-            
-            let sampleX = Math.floor(canvas.width / 2);
-            let sampleY = Math.floor(canvas.height / 2);
-            let pixelData;
-            try {
-                pixelData = ctx.getImageData(sampleX, sampleY, 1, 1).data;
-            } catch(e) {
-                pixelData = [120, 110, 100, 255];
+
+            // UI LOADING STATE
+            document.getElementById('res-name').innerText = "SCANNING...";
+            document.getElementById('res-science').innerText = "Running Neural Network";
+            document.getElementById('res-fact').innerText = "Analyzing pixel data...";
+            document.getElementById('result-overlay').style.display = "grid";
+
+            let detectedName = "Unknown Specimen";
+            let detectedScience = "Species Unverified";
+            let detectedFact = "Manual logging required.";
+
+            // Check manual override first
+            const rawIn = document.getElementById('manual-text-input').value.trim();
+            if (rawIn) {
+                detectedName = rawIn.toUpperCase();
+                detectedScience = "Manual Override Log";
+                detectedFact = "Entry forced via Mode M keyboard override.";
+            } 
+            // Run TensorFlow AI
+            else if (aiModel) {
+                try {
+                    const predictions = await aiModel.classify(canvas);
+                    if (predictions && predictions.length > 0) {
+                        // Clean up AI output (capitalize first letter, get best guess)
+                        let topGuess = predictions[0].className.split(',')[0];
+                        detectedName = topGuess.charAt(0).toUpperCase() + topGuess.slice(1);
+                        detectedScience = `Match Confidence: ${Math.round(predictions[0].probability * 100)}%`;
+                        detectedFact = `Neural network identified characteristics of ${predictions[0].className}.`;
+                    }
+                } catch (e) {
+                    console.error("AI Classification Error:", e);
+                    detectedFact = "AI classification failed. Check console.";
+                }
+            } else {
+                detectedFact = "AI Model is still loading. Please wait a moment and try again.";
             }
-            
-            let r = pixelData[0], g = pixelData[1], b = pixelData[2];
-            let avg = (r + g + b) / 3;
-            let variance = (Math.pow(r-avg, 2) + Math.pow(g-avg, 2) + Math.pow(b-avg, 2)) / 3;
-            let saturation = Math.sqrt(variance);
 
-            const rawIn = document.getElementById('manual-text-input').value.toLowerCase().trim();
-            
-            let detectedName = "White-Tailed Deer 🦊";
-            let detectedScience = "Odocoileus virginianus";
-            let detectedFact = "Native alert Texas herbivore detected inside forest cluster boundaries.";
-
-            if (rawIn.includes("woodpecker")) {
-                detectedName = "Pileated Woodpecker 🐦";
-                detectedScience = "Dryocopus pileatus";
-                detectedFact = "Crimson crest cap wood excavator.";
-            } else if (rawIn.includes("deer")) {
-                detectedName = "White-Tailed Deer 🦊";
-                detectedScience = "Odocoileus virginianus";
-                detectedFact = "Native alert Texas herbivore.";
-            } else if (saturation < 14) { 
-                detectedName = "Flat Surface / Floor 🗺️";
-                detectedScience = "Null Specimen Detected";
-                detectedFact = "The camera lens is targeting a floor, plain ceiling, or solid structural barrier.";
-            }
-
+            // Update UI with final result
             document.getElementById('res-name').innerText = detectedName;
             document.getElementById('res-science').innerText = detectedScience;
             document.getElementById('res-fact').innerText = detectedFact;
@@ -610,14 +636,13 @@
                 fact: detectedFact,
                 image: canvas.toDataURL('image/jpeg', 0.6)
             };
-
-            document.getElementById('result-overlay').style.display = "grid";
         });
 
         // --- 🗃️ SAVING & STORAGE ENGINE ---
         document.getElementById('btn-log-dex').addEventListener('click', function() {
             if(!currentScanPayload) return;
 
+            // This localStorage function works perfectly as long as the site is hosted (like on GitHub Pages)
             let entries = JSON.parse(localStorage.getItem('wildlifeDexEntries') || '[]');
             entries.unshift(currentScanPayload);
             localStorage.setItem('wildlifeDexEntries', JSON.stringify(entries));
