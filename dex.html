@@ -1,263 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wildlife Dex</title>
-    <style>
-        /* --- 🎨 STYLING & UI --- */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #121212;
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+<html>
+<body style="background:black; color:white; font-family:sans-serif;">
 
-        #camera-container {
-            width: 100%;
-            max-width: 500px;
-            position: relative;
-            background: #000;
-        }
-
-        #camera-feed {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-
-        #btn-scan {
-            width: 100%;
-            padding: 20px;
-            font-size: 18px;
-            font-weight: bold;
-            background-color: #007aff;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-
-        /* --- 📱 OVERLAY STYLES --- */
-        #result-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 1000;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .card {
-            background: #1e1e1e;
-            padding: 20px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 400px;
-            margin-bottom: 20px;
-        }
-
-        .card h2 { margin: 0 0 5px 0; color: #4cd964; }
-        .card h4 { margin: 0 0 15px 0; color: #888; font-style: italic; }
-        .card p { font-size: 14px; line-height: 1.5; }
-
-        .overlay-btn {
-            width: 100%;
-            padding: 15px;
-            margin: 5px 0;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        #btn-log-dex { background: #ffffff; color: #000000; }
-        #btn-close-card { background: #333333; color: #ffffff; }
-
-        /* --- 📚 GALLERY STYLES --- */
-        #gallery {
-            width: 100%;
-            max-width: 500px;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        .dex-entry {
-            background: #1e1e1e;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .dex-entry img {
-            width: 80px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: 8px;
-        }
-
-        .dex-info h3 { margin: 0; font-size: 16px; }
-        .dex-info p { margin: 5px 0 0 0; font-size: 12px; color: #aaa; }
-    </style>
-</head>
-<body>
-
-    <div id="camera-container">
-        <video id="camera-feed" autoplay playsinline></video>
-        <canvas id="snapshot-canvas" style="display: none;"></canvas>
-    </div>
-    <button id="btn-scan">🔍 Scan Wildlife</button>
-
-    <div id="result-overlay">
-        <div class="card">
-            <h2 id="res-name">Loading...</h2>
-            <h4 id="res-science">...</h4>
-            <p id="res-fact">Analyzing subject data...</p>
-        </div>
-        <div style="width: 90%; max-width: 400px;">
-            <button id="btn-log-dex" class="overlay-btn">＋ Register Entry</button>
-            <button id="btn-close-card" class="overlay-btn">Dismiss</button>
-        </div>
-    </div>
-
-    <div id="gallery">
-        <h2>My Dex</h2>
-        <div id="gallery-container"></div>
-    </div>
+    <h1>DEBUGGER</h1>
+    <div id="debug-log" style="color:yellow; border:1px solid white; padding:10px; margin-bottom:10px;">Starting...</div>
+    
+    <video id="vid" autoplay playsinline style="width:100%"></video>
+    <button id="btn" style="width:100%; padding:20px; font-size:20px;">TEST SCAN</button>
 
     <script>
-        // --- ⚙️ GLOBAL VARIABLES ---
-        let video = document.getElementById('camera-feed');
-        let canvas = document.getElementById('snapshot-canvas');
-        let ctx = canvas.getContext('2d');
-        let currentScanPayload = null;
+        const log = document.getElementById('debug-log');
+        log.innerText = "Script Loaded.";
 
-        // --- 📷 CAMERA SETUP ---
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(stream => { video.srcObject = stream; })
-            .catch(err => {
-                alert("Camera access denied or unavailable.");
-                console.error(err);
-            });
-
-        // --- 📊 SCANNER ENGINE ---
-        document.getElementById('btn-scan').addEventListener('click', function() {
-            // iOS Fix: Ensure the video actually has dimensions before snapping
-            if (video.videoWidth === 0 || video.videoHeight === 0) {
-                alert("Camera still initializing, please try again in a second!");
-                return;
-            }
-
-            // 1. Setup Canvas & Shrink Image to Thumbnail Size to prevent 5MB storage crash
-            const MAX_WIDTH = 400; // Force the image to be small
-            const scale = MAX_WIDTH / video.videoWidth;
-            
-            canvas.width = MAX_WIDTH;
-            canvas.height = video.videoHeight * scale;
-            
-            // Draw the video frame onto the smaller canvas
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            // 2. Show Overlay UI (Loading state)
-            document.getElementById('result-overlay').style.display = "flex";
-            document.getElementById('res-name').innerText = "Scanning...";
-            document.getElementById('res-science').innerText = "Connecting to AI...";
-            document.getElementById('res-fact').innerText = "Please wait.";
-            document.getElementById('btn-log-dex').style.display = "none"; // Hide save button while loading
-
-            // 3. Fake AI Processing Delay (Replace this block with your actual AI API call later)
-            setTimeout(() => {
-                const detectedName = "Red-bellied Woodpecker";
-                const detectedScience = "Melanerpes carolinus";
-                const detectedFact = "They use their sticky, barbed tongues to extract insects from deep crevices in wood.";
-
-                // Update UI with final result
-                document.getElementById('res-name').innerText = detectedName;
-                document.getElementById('res-science').innerText = detectedScience;
-                document.getElementById('res-fact').innerText = detectedFact;
-                document.getElementById('btn-log-dex').style.display = "block"; // Show save button
-                
-                try {
-                    // Create the save payload (Quality 0.4 to prevent storage limits)
-                    currentScanPayload = {
-                        name: detectedName,
-                        science: detectedScience,
-                        fact: detectedFact,
-                        image: canvas.toDataURL('image/jpeg', 0.4) 
-                    };
-                } catch (e) {
-                    alert("CRITICAL ERROR: Browser refused to process the image frame. " + e.message);
-                }
-            }, 2000); // 2 second fake delay
+        navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+            document.getElementById('vid').srcObject = stream;
+            log.innerText = "Camera Connected.";
+        })
+        .catch(err => {
+            log.innerText = "CAMERA ERROR: " + err.message;
         });
 
-        // --- 🗃️ SAVING & STORAGE ENGINE ---
-        document.getElementById('btn-log-dex').addEventListener('click', function() {
-            if(!currentScanPayload) {
-                alert("ERROR: Scan data is missing!");
-                return;
-            }
-
-            try {
-                // Read existing storage
-                let entries = [];
-                try {
-                    entries = JSON.parse(localStorage.getItem('wildlifeDexEntries') || '[]');
-                } catch (parseError) {
-                    console.log("Corrupted save data, resetting dex.");
-                }
-
-                // Add new image and save
-                entries.unshift(currentScanPayload);
-                localStorage.setItem('wildlifeDexEntries', JSON.stringify(entries));
-
-                // Update UI to show success
-                const saveBtn = document.getElementById('btn-log-dex');
-                saveBtn.innerText = "✓ Entry Registered!";
-                saveBtn.style.backgroundColor = "#4cd964";
-                saveBtn.style.color = "#ffffff";
-                
-                // Close overlay and reset after 1 second
-                setTimeout(function() {
-                    document.getElementById('result-overlay').style.display = "none";
-                    saveBtn.innerText = "＋ Register Entry";
-                    saveBtn.style.backgroundColor = "#ffffff";
-                    saveBtn.style.color = "#000000";
-                    currentScanPayload = null;
-                    renderGallery(); // Update the list at the bottom
-                }, 1000);
-
-            } catch (err) {
-                alert("SAVE REJECTED BY BROWSER!\n\nReason: " + err.message + "\n\nIf it says 'QuotaExceededError', you need to clear your Safari website data for this site in your phone settings.");
-            }
-        });
-
-        // Close Overlay without saving
-        document.getElementById('btn-close-card').addEventListener('click', function() {
-            document.getElementById('result-overlay').style.display = "none";
-            currentScanPayload = null;
-        });
-
-        // --- 🖼️ GALLERY RENDERER ---
-        function renderGallery() {
-            const container = document.getElementById('gallery-container');
-            container.innerHTML = ""; // Clear current list
-            
-            let entries = [];
-            try {
-                entries = JSON.parse(localStorage.getItem('wildlifeDexEntries') || '[]');
-            } catch (e) { return; }
-
-            if (entries.length === 0) {
-                container.innerHTML = "<p style='color:#888;'>No wildlife logged yet. Go scan something!</p>";
+        document.getElementById('btn').onclick = () => {
+            log.innerText = "Button clicked! Attempting scan...";
+            alert("Button Clicked Successfully");
+        };
+    </script>
+</body>
+</html>
