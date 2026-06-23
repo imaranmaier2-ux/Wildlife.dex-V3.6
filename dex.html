@@ -1,69 +1,40 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wildlife Dex</title>
-    <style>
-        body { font-family: sans-serif; background: #121212; color: #fff; margin: 0; display: flex; flex-direction: column; align-items: center; }
-        #camera-container { width: 100%; max-width: 500px; background: #000; }
-        #camera-feed { width: 100%; display: block; }
-        #btn-scan { width: 100%; padding: 20px; background: #007aff; color: white; border: none; font-size: 18px; font-weight: bold; }
-        #result-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        .card { background: #1e1e1e; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; margin-bottom: 20px; }
-        .overlay-btn { width: 100%; padding: 15px; margin: 5px 0; border: none; border-radius: 8px; font-weight: bold; }
-    </style>
-</head>
-<body>
-
-    <div id="camera-container">
-        <video id="camera-feed" autoplay playsinline></video>
-        <canvas id="snapshot-canvas" style="display: none;"></canvas>
-    </div>
-    <button id="btn-scan">🔍 Scan Wildlife</button>
-
-    <div id="result-overlay">
-        <div class="card">
-            <h2 id="res-name">Analyzing...</h2>
-            <p id="res-fact">Identifying species...</p>
-            <button id="btn-log-dex" class="overlay-btn">＋ Register Entry</button>
-            <button id="btn-close-card" class="overlay-btn" style="background:#333; color:#fff;">Dismiss</button>
-        </div>
-    </div>
+<html>
+<body style="background:black; color:white; font-family:sans-serif; text-align:center;">
+    <h1>App v1.0</h1>
+    <video id="vid" autoplay playsinline style="width:100%"></video>
+    <button id="btn" style="width:100%; padding:20px; font-size:20px; margin-top:20px;">TEST SCAN & SAVE</button>
+    <div id="status" style="margin-top:20px; color:yellow;">Status: Waiting...</div>
 
     <script>
-        const video = document.getElementById('camera-feed');
-        const canvas = document.getElementById('snapshot-canvas');
-        let currentScan = null;
+        const video = document.getElementById('vid');
+        const status = document.getElementById('status');
 
+        // 1. Camera Initialization
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(stream => { video.srcObject = stream; })
-            .catch(err => alert("Camera error: " + err.message));
+        .then(stream => { 
+            video.srcObject = stream; 
+            status.innerText = "Camera Connected.";
+        })
+        .catch(err => { status.innerText = "Camera Error: " + err.message; });
 
-        document.getElementById('btn-scan').onclick = () => {
-            const ctx = canvas.getContext('2d');
-            canvas.width = 400;
-            canvas.height = video.videoHeight * (400 / video.videoWidth);
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            document.getElementById('result-overlay').style.display = "flex";
-            
-            // Simulating AI response
-            currentScan = { name: "Red-bellied Woodpecker", fact: "Common forest bird.", image: canvas.toDataURL('image/jpeg', 0.5) };
-            document.getElementById('res-name').innerText = currentScan.name;
-            document.getElementById('res-fact').innerText = currentScan.fact;
-        };
-
-        document.getElementById('btn-log-dex').onclick = () => {
-            let entries = JSON.parse(localStorage.getItem('dex') || '[]');
-            entries.unshift(currentScan);
-            localStorage.setItem('dex', JSON.stringify(entries));
-            alert("Entry Saved!");
-            document.getElementById('result-overlay').style.display = "none";
-        };
-
-        document.getElementById('btn-close-card').onclick = () => {
-            document.getElementById('result-overlay').style.display = "none";
+        // 2. Scan and Save Test
+        document.getElementById('btn').onclick = () => {
+            try {
+                // Attempt to save a simple test string to prove LocalStorage works
+                localStorage.setItem('testKey', 'Test Success!');
+                
+                // Verify the save
+                const check = localStorage.getItem('testKey');
+                if(check === 'Test Success!') {
+                    status.innerText = "Success: Data Saved!";
+                    alert("Scan & Save Worked!");
+                } else {
+                    status.innerText = "Error: Storage failed to read.";
+                }
+            } catch (e) {
+                status.innerText = "Storage Crash: " + e.message;
+            }
         };
     </script>
 </body>
