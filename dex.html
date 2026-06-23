@@ -2,45 +2,54 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>NOT BORING // TACTILE CAM PRO</title>
+    <title>W.G. JONES // TACTILE CAM PRO</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        * { box-sizing: border-box; -webkit-user-select: none; user-select: none; }
-        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #121110; font-family: -apple-system, sans-serif; overflow: hidden; }
+        * { box-sizing: border-box; touch-action: manipulation; }
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; font-family: -apple-system, sans-serif; overflow: hidden; }
 
-        /* Full Screen Camera Layout */
+        /* Main UI Container: Fluid width */
         .camera-container {
-            display: grid;
-            grid-template-columns: 100px 1fr 100px; /* Wider center */
+            display: flex;
             width: 100vw; height: 100vh;
-            background-color: #1a1a1a;
+            background-color: #000;
+        }
+
+        /* Sidebar Panels - Fixed width to prevent squeezing */
+        .panel-left, .panel-right {
+            width: 120px; 
+            flex-shrink: 0;
+            display: flex; flex-direction: column; justify-content: space-around;
+            align-items: center; padding: 20px 0;
+            background: #121110;
+            z-index: 10;
+        }
+
+        /* Center Panel: Expands to fill available space */
+        .panel-center {
+            flex-grow: 1;
+            padding: 10px;
             position: relative;
         }
 
-        /* Fixed Center Viewfinder */
-        .panel-center { position: relative; width: 100%; height: 100%; padding: 10px; }
         .viewfinder-viewport {
             width: 100%; height: 100%;
             background-color: #000;
-            border-radius: 30px;
+            border-radius: 24px;
             overflow: hidden;
             position: relative;
             border: 4px solid #333;
         }
+
         #embedded-live-video {
             width: 100%; height: 100%;
-            object-fit: cover;
+            object-fit: cover; /* This prevents the "squeezed" look */
+            transform: scaleX(-1); /* Mirror view for natural feel */
         }
 
-        /* Sidebar Panels */
-        .panel-left, .panel-right {
-            display: flex; flex-direction: column; justify-content: space-around;
-            align-items: center; padding: 20px 0; background: #121110;
-        }
-
-        /* Buttons */
-        .giant-shutter-red { width: 80px; height: 80px; background-color: #ff3b30; border-radius: 50%; border: none; cursor: pointer; }
-        .btn-gallery { width: 60px; height: 60px; background: #333; color: white; border-radius: 20px; border: none; font-size: 20px; }
+        /* UI Elements */
+        .giant-shutter-red { width: 80px; height: 80px; background-color: #ff3b30; border-radius: 50%; border: none; cursor: pointer; box-shadow: 0 4px 10px rgba(255,59,48,0.3); }
+        .btn-gallery { width: 60px; height: 60px; background: #222; color: white; border-radius: 50%; border: none; font-size: 24px; cursor: pointer; }
 
         /* Gallery Overlay */
         #gallery-overlay {
@@ -55,8 +64,7 @@
 <body>
 
     <div id="gallery-overlay">
-        <button onclick="document.getElementById('gallery-overlay').style.display='none'" style="padding:10px;">X CLOSE</button>
-        <h2>MY COLLECTION</h2>
+        <button onclick="document.getElementById('gallery-overlay').style.display='none'" style="padding:15px; margin-bottom:20px;">BACK TO CAMERA</button>
         <div class="gallery-grid" id="gallery-list"></div>
     </div>
 
@@ -81,20 +89,29 @@
         let galleryData = JSON.parse(localStorage.getItem('my_jones_gallery')) || [];
 
         // Camera Initialization
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(s => video.srcObject = s);
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment" } 
+                });
+                video.srcObject = stream;
+            } catch (err) {
+                alert("Camera access denied. Please enable in browser settings.");
+            }
+        }
 
         // Capture Logic
         document.getElementById('shutter-trigger').addEventListener('click', () => {
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
+            const ctx = canvas.getContext('2d');
+            ctx.scale(-1, 1); // Flip horizontally to match mirror view
+            ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
             
             galleryData.push({ img: canvas.toDataURL('image/png') });
             localStorage.setItem('my_jones_gallery', JSON.stringify(galleryData));
             renderGallery();
-            alert("Specimen Captured!");
         });
 
         function renderGallery() {
@@ -104,6 +121,7 @@
             `).join('');
         }
 
+        startCamera();
         renderGallery();
     </script>
 </body>
