@@ -2,66 +2,71 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>W.G. JONES // PRO-DEX</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { width: 100vw; height: 100vh; background: #d2b48c; overflow: hidden; display: flex; justify-content: center; align-items: center; }
-
-        /* THE CAMERA BODY - FORCED LANDSCAPE */
-        .camera-body {
+        
+        /* Force full screen and landscape-like behavior */
+        body { 
+            width: 100vw; height: 100vh; 
+            background: #d2b48c; 
+            overflow: hidden;
             display: flex;
-            width: 95vw; height: 80vh;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Container that specifically ignores mobile browser bars */
+        .camera-container {
+            width: 95vw; 
+            height: 90vh;
             background: #e6cba9;
             border-radius: 40px;
+            display: flex;
             padding: 20px;
             gap: 20px;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
-            /* This ensures it stays a horizontal block */
-            flex-direction: row; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
 
-        /* SIDEBARS */
-        .sidebar { width: 100px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; }
+        .left-panel { width: 100px; display: flex; flex-direction: column; justify-content: flex-end; }
+        .right-panel { width: 100px; display: flex; flex-direction: column; justify-content: center; }
 
-        /* VIEWPORT - FORCED TO EXPAND */
-        .viewport-wrapper {
-            flex-grow: 1; /* This makes the middle take all space */
+        .viewport-center {
+            flex-grow: 1;
             background: #000;
-            border-radius: 20px;
-            overflow: hidden;
+            border-radius: 25px;
             border: 8px solid #c4a984;
-            display: flex;
+            overflow: hidden;
         }
 
-        #live-video {
+        #live-feed {
             width: 100%; height: 100%;
-            object-fit: cover; /* Prevents squishing */
+            object-fit: cover;
         }
 
-        /* UI ELEMENTS */
-        .red-button { width: 80px; height: 80px; background: #ff3e3e; border-radius: 50%; border: none; cursor: pointer; }
-        .btn-small { width: 50px; height: 50px; border-radius: 15px; border: none; background: #c4a984; }
+        .btn-shutter { width: 80px; height: 80px; background: #ff3e3e; border-radius: 50%; border: none; }
+        .btn-folder { width: 50px; height: 50px; background: #c4a984; border-radius: 15px; border: none; }
     </style>
 </head>
 <body>
 
-    <div class="camera-body">
-        <div class="sidebar">
-            <button class="btn-small" onclick="alert('Open Dex')">📁</button>
+    <div class="camera-container">
+        <div class="left-panel">
+            <button class="btn-folder" onclick="alert('DEX OPEN')">📁</button>
+        </div>
+        
+        <div class="viewport-center">
+            <video id="live-feed" autoplay playsinline muted></video>
         </div>
 
-        <div class="viewport-wrapper">
-            <video id="live-video" autoplay playsinline muted></video>
-        </div>
-
-        <div class="sidebar">
-            <button class="red-button" id="shutter"></button>
+        <div class="right-panel">
+            <button class="btn-shutter" id="shutter"></button>
         </div>
     </div>
 
     <script>
-        const video = document.getElementById('live-video');
+        const video = document.getElementById('live-feed');
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
             .then(s => video.srcObject = s);
     </script>
