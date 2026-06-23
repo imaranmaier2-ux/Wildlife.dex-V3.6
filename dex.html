@@ -5,19 +5,19 @@
     <title>W.G. JONES // TACTILE CAM PRO</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        * { box-sizing: border-box; touch-action: manipulation; }
-        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; font-family: -apple-system, sans-serif; overflow: hidden; }
+        * { box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; overflow: hidden; font-family: -apple-system, sans-serif; }
 
-        /* Main UI Container: Fluid width */
+        /* Outer Frame */
         .camera-container {
             display: flex;
             width: 100vw; height: 100vh;
-            background-color: #000;
+            background-color: #1a1a1a;
         }
 
-        /* Sidebar Panels - Fixed width to prevent squeezing */
-        .panel-left, .panel-right {
-            width: 120px; 
+        /* Side Panels - Fixed width */
+        .sidebar {
+            width: 100px;
             flex-shrink: 0;
             display: flex; flex-direction: column; justify-content: space-around;
             align-items: center; padding: 20px 0;
@@ -25,37 +25,41 @@
             z-index: 10;
         }
 
-        /* Center Panel: Expands to fill available space */
+        /* Center Panel - The Viewport */
         .panel-center {
             flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             padding: 10px;
-            position: relative;
+            background: #000;
         }
 
         .viewfinder-viewport {
-            width: 100%; height: 100%;
-            background-color: #000;
-            border-radius: 24px;
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            border-radius: 20px;
             overflow: hidden;
-            position: relative;
             border: 4px solid #333;
+            /* Force aspect ratio to match typical phone camera */
+            aspect-ratio: 3 / 4; 
+            background: #000;
         }
 
         #embedded-live-video {
             width: 100%; height: 100%;
-            object-fit: cover; /* This prevents the "squeezed" look */
-            transform: scaleX(-1); /* Mirror view for natural feel */
+            object-fit: cover; /* Ensures video fills the box perfectly */
         }
 
-        /* UI Elements */
-        .giant-shutter-red { width: 80px; height: 80px; background-color: #ff3b30; border-radius: 50%; border: none; cursor: pointer; box-shadow: 0 4px 10px rgba(255,59,48,0.3); }
-        .btn-gallery { width: 60px; height: 60px; background: #222; color: white; border-radius: 50%; border: none; font-size: 24px; cursor: pointer; }
+        /* Buttons */
+        .giant-shutter-red { width: 70px; height: 70px; background-color: #ff3b30; border-radius: 50%; border: none; cursor: pointer; }
+        .btn-gallery { width: 50px; height: 50px; background: #333; color: white; border-radius: 50%; border: none; font-size: 20px; }
 
         /* Gallery Overlay */
         #gallery-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); z-index: 500; display: none; padding: 20px;
-            color: white; overflow-y: auto;
+            background: #000; z-index: 500; display: none; padding: 20px; color: white; overflow-y: auto;
         }
         .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .gallery-item img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 10px; }
@@ -64,12 +68,12 @@
 <body>
 
     <div id="gallery-overlay">
-        <button onclick="document.getElementById('gallery-overlay').style.display='none'" style="padding:15px; margin-bottom:20px;">BACK TO CAMERA</button>
+        <button onclick="document.getElementById('gallery-overlay').style.display='none'" style="padding:15px; margin-bottom:20px; background: #333; color:white; border:none; border-radius:10px;">X CLOSE</button>
         <div class="gallery-grid" id="gallery-list"></div>
     </div>
 
     <div class="camera-container">
-        <div class="panel-left">
+        <div class="sidebar">
             <button class="btn-gallery" onclick="document.getElementById('gallery-overlay').style.display='block'">📁</button>
         </div>
         
@@ -79,7 +83,7 @@
             </div>
         </div>
 
-        <div class="panel-right">
+        <div class="sidebar">
             <button class="giant-shutter-red" id="shutter-trigger"></button>
         </div>
     </div>
@@ -88,26 +92,17 @@
         const video = document.getElementById('embedded-live-video');
         let galleryData = JSON.parse(localStorage.getItem('my_jones_gallery')) || [];
 
-        // Camera Initialization
-        async function startCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment" } 
-                });
-                video.srcObject = stream;
-            } catch (err) {
-                alert("Camera access denied. Please enable in browser settings.");
-            }
-        }
+        // Camera Logic
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(s => video.srcObject = s)
+            .catch(e => console.error("Camera Error:", e));
 
         // Capture Logic
         document.getElementById('shutter-trigger').addEventListener('click', () => {
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.scale(-1, 1); // Flip horizontally to match mirror view
-            ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+            canvas.getContext('2d').drawImage(video, 0, 0);
             
             galleryData.push({ img: canvas.toDataURL('image/png') });
             localStorage.setItem('my_jones_gallery', JSON.stringify(galleryData));
@@ -121,7 +116,6 @@
             `).join('');
         }
 
-        startCamera();
         renderGallery();
     </script>
 </body>
