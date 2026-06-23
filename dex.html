@@ -7,35 +7,39 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
+        /* 1. Pin the layout to the absolute screen bounds */
         body { 
             background: #d2b48c; 
-            overflow: hidden; 
             width: 100vw; 
-            height: 100vh;
-        }
-
-        /* This container pins the camera to the full screen */
-        .camera-ui {
-            position: fixed;
-            inset: 0;
-            display: grid;
-            grid-template-columns: 120px 1fr 120px;
-            padding: 20px;
-            gap: 20px;
-        }
-
-        /* Sidebar Panels */
-        .panel { display: flex; flex-direction: column; justify-content: space-between; align-items: center; }
-
-        /* The Viewfinder - The core of the NotBoring look */
-        .viewport {
-            background: #000;
-            border-radius: 24px;
+            height: 100vh; 
             overflow: hidden;
-            border: 8px solid #c4a984;
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        /* 2. The Main Camera Body - Forces Horizontal layout */
+        .camera-body {
+            display: grid;
+            grid-template-columns: 100px 1fr 100px;
+            width: 95vw;
+            height: 85vh;
+            background: #e6cba9;
+            border-radius: 40px;
+            padding: 20px;
+            gap: 20px;
+            position: relative;
+        }
+
+        /* 3. The Viewport - Forced Square */
+        .viewport-frame {
+            background: #000;
+            border-radius: 20px;
+            border: 8px solid #c4a984;
+            overflow: hidden;
+            position: relative;
+            /* Essential to stop the squish */
+            aspect-ratio: 1 / 1;
         }
 
         #live-feed {
@@ -44,34 +48,30 @@
             object-fit: cover;
         }
 
-        /* Buttons */
-        .btn-red { width: 90px; height: 90px; background: #ff3b30; border-radius: 50%; border: 6px solid #fff; }
-        .btn-ui { width: 60px; height: 60px; background: #c4a984; border-radius: 15px; border: none; }
+        /* UI Elements */
+        .sidebar { display: flex; flex-direction: column; justify-content: space-between; align-items: center; }
+        .btn-round { width: 80px; height: 80px; background: #ff3b30; border-radius: 50%; }
+        .btn-square { width: 50px; height: 50px; background: #c4a984; border-radius: 15px; }
     </style>
 </head>
 <body>
 
-    <div class="camera-ui">
-        <div class="panel">
-            <button class="btn-ui" onclick="alert('DEX OPEN')">📁</button>
+    <div class="camera-body">
+        <div class="sidebar">
+            <button class="btn-square">📁</button>
         </div>
         
-        <div class="viewport">
+        <div class="viewport-frame">
             <video id="live-feed" autoplay playsinline muted></video>
         </div>
 
-        <div class="panel">
-            <button class="btn-red" id="shutter"></button>
+        <div class="sidebar">
+            <button class="btn-round" id="shutter"></button>
         </div>
     </div>
 
     <script>
         const video = document.getElementById('live-feed');
-        // Force Landscape Lock if possible
-        if (screen.orientation) {
-            screen.orientation.lock('landscape').catch(() => {});
-        }
-
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
             .then(s => video.srcObject = s);
     </script>
