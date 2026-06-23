@@ -2,58 +2,72 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>NOT BORING // TACTILE CAM CAM PRO</title>
+    <title>NOT BORING // TACTILE CAM PRO</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        /* [PREVIOUS STYLES RETAINED - ADDING GALLERY STYLES BELOW] */
-        * { box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; -webkit-user-select: none; user-select: none; }
         html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #121110; font-family: -apple-system, sans-serif; overflow: hidden; }
-        
-        .orientation-shield { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #121110; color: #d7be9f; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
-        .camera-container { width: 100vw; height: 100vh; background-color: #d7be9f; display: grid; grid-template-columns: 140px 1fr 140px; padding: 10px; position: relative; }
-        
-        .panel-left, .panel-right { display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 5px 0; }
-        .viewfinder-viewport { width: 100%; height: 100%; background-color: #000; border-radius: 24px; position: relative; overflow: hidden; }
-        #embedded-live-video { width: 100%; height: 100%; object-fit: cover; }
-        
-        .giant-shutter-red { width: 110px; height: 110px; background-color: #ff3b30; border-radius: 50%; cursor: pointer; border: none; box-shadow: 0px 6px 12px rgba(0,0,0,0.45); }
-        
-        /* NEW GALLERY STYLES */
-        #gallery-overlay { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: #121110; z-index: 200; display: none; padding: 20px; overflow-y: auto; color: #fff; }
+
+        /* Full Screen Camera Layout */
+        .camera-container {
+            display: grid;
+            grid-template-columns: 100px 1fr 100px; /* Wider center */
+            width: 100vw; height: 100vh;
+            background-color: #1a1a1a;
+            position: relative;
+        }
+
+        /* Fixed Center Viewfinder */
+        .panel-center { position: relative; width: 100%; height: 100%; padding: 10px; }
+        .viewfinder-viewport {
+            width: 100%; height: 100%;
+            background-color: #000;
+            border-radius: 30px;
+            overflow: hidden;
+            position: relative;
+            border: 4px solid #333;
+        }
+        #embedded-live-video {
+            width: 100%; height: 100%;
+            object-fit: cover;
+        }
+
+        /* Sidebar Panels */
+        .panel-left, .panel-right {
+            display: flex; flex-direction: column; justify-content: space-around;
+            align-items: center; padding: 20px 0; background: #121110;
+        }
+
+        /* Buttons */
+        .giant-shutter-red { width: 80px; height: 80px; background-color: #ff3b30; border-radius: 50%; border: none; cursor: pointer; }
+        .btn-gallery { width: 60px; height: 60px; background: #333; color: white; border-radius: 20px; border: none; font-size: 20px; }
+
+        /* Gallery Overlay */
+        #gallery-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 500; display: none; padding: 20px;
+            color: white; overflow-y: auto;
+        }
         .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .gallery-item { background: #242221; border-radius: 12px; padding: 5px; text-align: center; font-size: 10px; }
-        .gallery-item img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px; }
-        .nav-btns { display: flex; gap: 10px; margin-bottom: 20px; }
+        .gallery-item img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="orientation-shield" id="shield">
-        <h2>Please Flip Your Phone Sideways</h2>
-        <button onclick="document.getElementById('shield').style.display='none'">Force Open</button>
-    </div>
-
     <div id="gallery-overlay">
-        <div class="nav-btns">
-            <button onclick="document.getElementById('gallery-overlay').style.display='none'">BACK TO CAM</button>
-        </div>
-        <h2>COLLECTED SPECIMENS</h2>
+        <button onclick="document.getElementById('gallery-overlay').style.display='none'" style="padding:10px;">X CLOSE</button>
+        <h2>MY COLLECTION</h2>
         <div class="gallery-grid" id="gallery-list"></div>
     </div>
 
     <div class="camera-container">
         <div class="panel-left">
-            <button class="matte-round-btn" onclick="document.getElementById('gallery-overlay').style.display='block'">📁</button>
+            <button class="btn-gallery" onclick="document.getElementById('gallery-overlay').style.display='block'">📁</button>
         </div>
         
         <div class="panel-center">
             <div class="viewfinder-viewport">
                 <video id="embedded-live-video" autoplay playsinline muted></video>
-                <div class="hud-telemetry-overlay-card" id="result-overlay" style="display:none; position:absolute; inset:10px; background:rgba(0,0,0,0.9); z-index:100; color:white; padding:20px;">
-                    <canvas id="canvas-snapshot-output"></canvas>
-                    <h3 id="res-name"></h3>
-                    <button onclick="document.getElementById('result-overlay').style.display='none'">CLOSE</button>
-                </div>
             </div>
         </div>
 
@@ -63,39 +77,32 @@
     </div>
 
     <script>
+        const video = document.getElementById('embedded-live-video');
         let galleryData = JSON.parse(localStorage.getItem('my_jones_gallery')) || [];
 
-        function renderGallery() {
-            const list = document.getElementById('gallery-list');
-            list.innerHTML = galleryData.map(item => `
-                <div class="gallery-item">
-                    <img src="${item.img}">
-                    <p>${item.name}</p>
-                </div>
-            `).join('');
-        }
+        // Camera Initialization
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(s => video.srcObject = s);
 
+        // Capture Logic
         document.getElementById('shutter-trigger').addEventListener('click', () => {
-            const video = document.getElementById('embedded-live-video');
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
             
-            const newEntry = {
-                name: "Jones Specimen " + (galleryData.length + 1),
-                img: canvas.toDataURL('image/png')
-            };
-
-            galleryData.push(newEntry);
+            galleryData.push({ img: canvas.toDataURL('image/png') });
             localStorage.setItem('my_jones_gallery', JSON.stringify(galleryData));
             renderGallery();
-            alert("Entry Captured to Gallery!");
+            alert("Specimen Captured!");
         });
 
-        // Initialize camera
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(s => document.getElementById('embedded-live-video').srcObject = s);
+        function renderGallery() {
+            const list = document.getElementById('gallery-list');
+            list.innerHTML = galleryData.map(item => `
+                <div class="gallery-item"><img src="${item.img}"></div>
+            `).join('');
+        }
 
         renderGallery();
     </script>
