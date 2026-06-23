@@ -3,171 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>W.G. JONES // TACTILE CAM PRO // DEEP STRUCTURE</title>
+    <title>W.G. JONES // TACTILE CAM PRO</title>
     <style>
-        /* 1. Reset and Force Full-Screen */
-        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; }
-        html, body { width: 100vw; height: 100vh; background: #080808; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        /* BASE RESET */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { width: 100vw; height: 100vh; background: #000; overflow: hidden; }
 
-        /* 2. Hardware Body - The Grid Skeleton */
-        #camera-shell {
+        /* THE CAMERA BODY: Rigid grid layout */
+        .app-shell {
             display: grid;
-            grid-template-columns: 110px 1fr 110px;
+            grid-template-columns: 100px 1fr 100px;
             width: 100vw; height: 100vh;
-            background: #121110;
         }
 
-        /* 3. Sidebar Mechanical Sections */
-        .sidebar {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            padding: 40px 0;
-            border: 1px solid #222;
-            background: linear-gradient(180deg, #1d1c1b 0%, #121110 100%);
-        }
+        /* MECHANICAL SIDE PANELS */
+        .panel { background: #121110; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid #222; }
 
-        /* 4. The Viewport Engine - This forces the video to remain perfect */
-        .viewport-frame {
-            position: relative;
+        /* VIEWPORT: The container that holds the video */
+        .viewport-container { 
+            position: relative; 
+            width: 100%; height: 100%; 
             background: #000;
-            padding: 12px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            padding: 10px;
         }
 
-        .viewport-window {
-            width: 100%;
-            height: 100%;
-            border-radius: 28px;
-            overflow: hidden;
-            border: 5px solid #2a2a2a;
-            position: relative;
-            background: #000;
-        }
-
-        /* The actual video element logic */
-        #live-feed {
-            position: absolute;
-            top: 0; left: 0;
+        .viewport-inner {
             width: 100%; height: 100%;
-            object-fit: cover; /* ESSENTIAL: Prevents squishing */
-            transform: scaleX(1);
-        }
-
-        /* 5. Tactile UI Controls */
-        .btn {
-            width: 75px; height: 75px;
-            border-radius: 50%;
-            border: 3px solid #333;
-            background: #242221;
-            color: #d7be9f;
-            font-size: 24px;
-            cursor: pointer;
-            display: flex; justify-content: center; align-items: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-
-        .btn:active { background: #333; transform: scale(0.95); }
-        .shutter-btn { background: #ff3b30; border: 4px solid #fff; box-shadow: 0 0 30px rgba(255,59,48,0.4); }
-
-        /* 6. Gallery System */
-        #gallery-layer {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: #0a0a0a; z-index: 500; display: none; padding: 25px;
-            overflow-y: auto;
-        }
-
-        .gallery-header { color: #d7be9f; font-size: 20px; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
-
-        .gallery-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-        }
-
-        .gallery-item {
-            width: 100%; aspect-ratio: 1/1;
-            background: #222;
-            border-radius: 12px;
+            border-radius: 20px;
             overflow: hidden;
-            border: 2px solid #333;
+            position: relative;
+            background: #000;
         }
 
-        .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
+        /* THE VIDEO FEED: The key fix for "squishing" */
+        #live-video {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 100%; height: 100%;
+            object-fit: cover; /* This forces the camera to crop rather than stretch */
+            transform: translate(-50%, -50%);
+        }
+
+        /* INTERFACE BUTTONS */
+        .shutter-btn { width: 70px; height: 70px; background: #ff3b30; border-radius: 50%; border: none; cursor: pointer; }
+        .gallery-btn { width: 50px; height: 50px; background: #333; color: #fff; border-radius: 50%; border: none; }
+
+        /* GALLERY OVERLAY */
+        #gallery-layer { position: fixed; inset: 0; background: #000; z-index: 100; display: none; padding: 20px; color: white; overflow-y: auto; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .grid img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 10px; }
     </style>
 </head>
 <body>
 
     <div id="gallery-layer">
-        <div class="gallery-header">COLLECTED SPECIMENS</div>
-        <button onclick="document.getElementById('gallery-layer').style.display='none'" style="padding:10px 20px; margin-bottom:20px; background:#333; border:none; color:white; border-radius:8px;">EXIT GALLERY</button>
-        <div class="gallery-grid" id="gallery-grid"></div>
+        <button onclick="document.getElementById('gallery-layer').style.display='none'" style="padding:10px;">X CLOSE</button>
+        <div class="grid" id="gallery-grid"></div>
     </div>
 
-    <div id="camera-shell">
-        <div class="sidebar">
-            <button class="btn" onclick="document.getElementById('gallery-layer').style.display='block'">📁</button>
-            <div style="color: #666; font-size: 10px; writing-mode: vertical-rl;">W.G. JONES // D.E.X</div>
+    <div class="app-shell">
+        <div class="panel">
+            <button class="gallery-btn" onclick="document.getElementById('gallery-layer').style.display='block'">📁</button>
         </div>
-
-        <div class="viewport-frame">
-            <div class="viewport-window">
-                <video id="live-feed" autoplay playsinline muted></video>
+        <div class="viewport-container">
+            <div class="viewport-inner">
+                <video id="live-video" autoplay playsinline muted></video>
             </div>
         </div>
-
-        <div class="sidebar">
-            <button class="btn shutter-btn" id="shutter-btn"></button>
+        <div class="panel">
+            <button class="shutter-btn" id="shutter"></button>
         </div>
     </div>
 
     <script>
-        const video = document.getElementById('live-feed');
+        const video = document.getElementById('live-video');
         const grid = document.getElementById('gallery-grid');
-        let galleryData = JSON.parse(localStorage.getItem('my_jones_gallery')) || [];
+        let data = JSON.parse(localStorage.getItem('shots')) || [];
 
-        // Camera stream logic with hardware orientation
-        async function bootCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
-                });
-                video.srcObject = stream;
-            } catch (err) {
-                console.error("Hardware Initialization Error:", err);
-            }
-        }
+        // Correctly handle camera stream
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(s => video.srcObject = s);
 
-        // Shutter functionality
-        document.getElementById('shutter-btn').addEventListener('click', () => {
+        document.getElementById('shutter').addEventListener('click', () => {
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            
-            // Draw current frame to canvas
-            ctx.drawImage(video, 0, 0);
-            
-            // Save image data to array
-            const dataURL = canvas.toDataURL('image/png');
-            galleryData.push(dataURL);
-            localStorage.setItem('my_jones_gallery', JSON.stringify(galleryData));
-            
-            renderGallery();
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            data.push(canvas.toDataURL());
+            localStorage.setItem('shots', JSON.stringify(data));
+            render();
         });
 
-        // Gallery rendering logic
-        function renderGallery() {
-            grid.innerHTML = galleryData.map(data => `
-                <div class="gallery-item"><img src="${data}"></div>
-            `).join('');
+        function render() {
+            grid.innerHTML = data.map(i => `<img src="${i}">`).join('');
         }
-
-        bootCamera();
-        renderGallery();
+        render();
     </script>
 </body>
 </html>
