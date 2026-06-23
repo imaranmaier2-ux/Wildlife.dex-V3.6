@@ -6,26 +6,24 @@
     <title>W.G. Jones Wildlife Dex</title>
     <style>
         :root { --bg: #000; --card: #151515; --text: #fff; --accent: #333; }
-        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding: 20px; }
+        body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding: 20px; }
         
-        /* Viewfinder */
-        #viewfinder { width: 100%; aspect-ratio: 1/1; background: #000; border: 4px solid var(--accent); border-radius: 30px; overflow: hidden; position: relative; }
+        #viewfinder { width: 100%; aspect-ratio: 1/1; background: #000; border: 4px solid var(--accent); border-radius: 30px; overflow: hidden; position: relative; margin-bottom: 20px; }
         video { width: 100%; height: 100%; object-fit: cover; }
         
-        /* Controls */
-        .controls { display: flex; justify-content: center; padding: 20px; }
+        .controls { display: flex; justify-content: center; margin-bottom: 20px; }
         .capture-btn { width: 80px; height: 80px; border-radius: 50%; background: #fff; border: 8px solid #444; cursor: pointer; }
         
-        /* Nav */
-        .nav { display: flex; gap: 10px; margin: 20px 0; }
-        .tab { background: #222; padding: 10px 20px; border-radius: 20px; border: none; color: #fff; cursor: pointer; }
-        .tab.active { background: #fff; color: #000; }
+        /* Navigation Buttons */
+        .nav-container { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .tab-btn { background: #222; border: none; color: #fff; padding: 12px 20px; border-radius: 12px; cursor: pointer; font-weight: bold; }
+        .tab-btn.active { background: #fff; color: #000; }
         
-        /* Sections */
+        /* Content Sections */
         .section { display: none; }
         .section.active { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .card { background: var(--card); padding: 10px; border-radius: 20px; text-align: center; border: 1px solid #333; }
-        .card img { width: 100%; aspect-ratio: 1/1; border-radius: 15px; object-fit: cover; }
+        .card { background: var(--card); padding: 15px; border-radius: 20px; text-align: center; border: 1px solid #333; }
+        .card img { width: 100%; aspect-ratio: 1/1; border-radius: 10px; object-fit: cover; background: #222; }
     </style>
 </head>
 <body>
@@ -36,12 +34,13 @@
         <button class="capture-btn" id="snap"></button>
     </div>
 
-    <div class="nav">
-        <button class="tab active" onclick="switchTab('dex')">Dex List</button>
-        <button class="tab" onclick="switchTab('gallery')">Gallery</button>
+    <div class="nav-container">
+        <button class="tab-btn active" id="btn-dex" onclick="switchTab('dex')">Dex List</button>
+        <button class="tab-btn" id="btn-gallery" onclick="switchTab('gallery')">Gallery</button>
     </div>
 
     <div id="dex" class="section active"></div>
+    
     <div id="gallery" class="section"></div>
 
     <script>
@@ -50,15 +49,19 @@
 
         function switchTab(id) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(id).classList.add('active');
+            document.getElementById('btn-' + id).classList.add('active');
         }
 
         async function initCamera() {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-            const video = document.createElement('video');
-            video.srcObject = stream;
-            video.play();
-            document.getElementById('viewfinder').appendChild(video);
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.play();
+                document.getElementById('viewfinder').appendChild(video);
+            } catch (err) { console.error("Camera access denied"); }
         }
 
         document.getElementById('snap').addEventListener('click', () => {
@@ -71,21 +74,24 @@
             
             gallery.push({ name: species[Math.floor(Math.random() * species.length)], img: imgData });
             localStorage.setItem('my_gallery', JSON.stringify(gallery));
-            renderGallery();
+            render();
+            alert("Animal Captured!");
         });
 
-        function renderGallery() {
-            const container = document.getElementById('gallery');
-            container.innerHTML = gallery.map(item => `
-                <div class="card">
-                    <img src="${item.img}">
-                    <p>${item.name}</p>
-                </div>
-            `).join('');
+        function render() {
+            // Render Dex List
+            const dex = document.getElementById('dex');
+            dex.innerHTML = species.map(s => `<div class="card"><h3>${s}</h3><p>Status: Unknown</p></div>`).join('');
+            
+            // Render Gallery
+            const gal = document.getElementById('gallery');
+            gal.innerHTML = gallery.length > 0 
+                ? gallery.map(item => `<div class="card"><img src="${item.img}"><p>${item.name}</p></div>`).join('')
+                : '<p>No captures yet. Take a photo!</p>';
         }
 
         initCamera();
-        renderGallery();
+        render();
     </script>
 </body>
 </html>
