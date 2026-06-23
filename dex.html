@@ -5,98 +5,65 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>W.G. JONES // PRO-DEX</title>
     <style>
-        /* CSS RESET */
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { width: 100vw; height: 100vh; background: #c6b595; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+        body { width: 100vw; height: 100vh; background: #d2b48c; overflow: hidden; display: flex; justify-content: center; align-items: center; }
 
-        /* CAMERA BODY SHELL */
+        /* THE CAMERA BODY - FORCED LANDSCAPE */
         .camera-body {
             display: flex;
-            width: 98vw; height: 90vh;
-            background: #d4c2a0;
-            border-radius: 50px;
+            width: 95vw; height: 80vh;
+            background: #e6cba9;
+            border-radius: 40px;
             padding: 20px;
             gap: 20px;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
+            /* This ensures it stays a horizontal block */
+            flex-direction: row; 
         }
 
-        /* SIDEBARS: Fixed size so they never shrink */
-        .sidebar { min-width: 120px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
+        /* SIDEBARS */
+        .sidebar { width: 100px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; }
 
-        /* VIEWPORT: Locked aspect ratio */
-        .viewport {
-            flex-grow: 1;
+        /* VIEWPORT - FORCED TO EXPAND */
+        .viewport-wrapper {
+            flex-grow: 1; /* This makes the middle take all space */
             background: #000;
-            border-radius: 30px;
+            border-radius: 20px;
             overflow: hidden;
-            border: 10px solid #a89470;
-            position: relative;
+            border: 8px solid #c4a984;
+            display: flex;
         }
 
-        #feed { width: 100%; height: 100%; object-fit: cover; }
+        #live-video {
+            width: 100%; height: 100%;
+            object-fit: cover; /* Prevents squishing */
+        }
 
-        /* FUNCTIONAL BUTTONS */
-        .dial { width: 90px; height: 90px; background: #b8a685; border-radius: 50%; box-shadow: inset 0 -5px 5px rgba(0,0,0,0.2); }
-        .red-btn { width: 110px; height: 110px; background: #e83a3a; border-radius: 50%; border: 5px solid #fff; cursor: pointer; }
-        .btn-dex { width: 60px; height: 60px; background: #a89470; border-radius: 20px; border: none; font-size: 24px; }
-
-        /* DEX GALLERY */
-        #dex-overlay { position: fixed; inset: 0; background: #c6b595; z-index: 999; display: none; padding: 40px; overflow-y: auto; }
-        .polaroid-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 30px; }
-        .card { background: white; padding: 15px; border-radius: 5px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        /* UI ELEMENTS */
+        .red-button { width: 80px; height: 80px; background: #ff3e3e; border-radius: 50%; border: none; cursor: pointer; }
+        .btn-small { width: 50px; height: 50px; border-radius: 15px; border: none; background: #c4a984; }
     </style>
 </head>
 <body>
 
-    <div id="dex-overlay">
-        <button onclick="this.parentElement.style.display='none'" style="padding:10px;">RETURN TO CAMERA</button>
-        <div id="dex-list" class="polaroid-grid" style="margin-top:30px;"></div>
-    </div>
-
     <div class="camera-body">
         <div class="sidebar">
-            <div class="dial"></div>
-            <button class="btn-dex" onclick="document.getElementById('dex-overlay').style.display='block'">📁</button>
+            <button class="btn-small" onclick="alert('Open Dex')">📁</button>
         </div>
-        
-        <div class="viewport">
-            <video id="feed" autoplay playsinline muted></video>
+
+        <div class="viewport-wrapper">
+            <video id="live-video" autoplay playsinline muted></video>
         </div>
 
         <div class="sidebar">
-            <div class="dial"></div>
-            <button class="red-btn" id="shutter"></button>
+            <button class="red-button" id="shutter"></button>
         </div>
     </div>
 
     <script>
-        const feed = document.getElementById('feed');
-        let dex = JSON.parse(localStorage.getItem('dex_data')) || [];
-
-        // Camera init
+        const video = document.getElementById('live-video');
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(s => feed.srcObject = s);
-
-        // Capture Polaroids
-        document.getElementById('shutter').addEventListener('click', () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 600; canvas.height = 600;
-            canvas.getContext('2d').drawImage(feed, 0, 0, 600, 600);
-            
-            dex.push({ img: canvas.toDataURL('image/png'), ts: new Date().toLocaleTimeString() });
-            localStorage.setItem('dex_data', JSON.stringify(dex));
-            updateDex();
-        });
-
-        function updateDex() {
-            document.getElementById('dex-list').innerHTML = dex.map(item => `
-                <div class="card">
-                    <img src="${item.img}" style="width:100%; aspect-ratio:1/1;">
-                    <p style="text-align:center; margin-top:10px; font-family:sans-serif;">#${item.ts}</p>
-                </div>
-            `).join('');
-        }
-        updateDex();
+            .then(s => video.srcObject = s);
     </script>
 </body>
 </html>
