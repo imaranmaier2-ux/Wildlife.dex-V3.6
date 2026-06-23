@@ -6,60 +6,72 @@
     <title>W.G. JONES // PRO-DEX</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        /* Force the body to cover the entire hardware screen */
-        body {
-            position: fixed;
-            width: 100vw; height: 100vh;
-            background: #d2b48c;
-            overflow: hidden;
+        
+        body { 
+            background: #d2b48c; 
+            overflow: hidden; 
+            width: 100vw; 
+            height: 100vh;
         }
 
-        /* This container forces the Landscape shape */
-        .camera-container {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            display: flex;
+        /* This container pins the camera to the full screen */
+        .camera-ui {
+            position: fixed;
+            inset: 0;
+            display: grid;
+            grid-template-columns: 120px 1fr 120px;
             padding: 20px;
             gap: 20px;
-            background: #e6cba9;
         }
 
-        .left-panel { width: 15%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
-        .right-panel { width: 15%; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        /* Sidebar Panels */
+        .panel { display: flex; flex-direction: column; justify-content: space-between; align-items: center; }
 
-        .viewport-center {
-            flex-grow: 1;
+        /* The Viewfinder - The core of the NotBoring look */
+        .viewport {
             background: #000;
-            border-radius: 25px;
-            border: 8px solid #c4a984;
+            border-radius: 24px;
             overflow: hidden;
+            border: 8px solid #c4a984;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #live-feed {
-            width: 100%; height: 100%;
+            width: 100%;
+            height: 100%;
             object-fit: cover;
         }
 
-        .btn-shutter { width: 80px; height: 80px; background: #ff3e3e; border-radius: 50%; border: none; }
-        .btn-folder { width: 50px; height: 50px; background: #c4a984; border-radius: 15px; border: none; }
+        /* Buttons */
+        .btn-red { width: 90px; height: 90px; background: #ff3b30; border-radius: 50%; border: 6px solid #fff; }
+        .btn-ui { width: 60px; height: 60px; background: #c4a984; border-radius: 15px; border: none; }
     </style>
 </head>
 <body>
-    <div class="camera-container">
-        <div class="left-panel">
-            <button class="btn-folder" onclick="alert('DEX OPEN')">📁</button>
+
+    <div class="camera-ui">
+        <div class="panel">
+            <button class="btn-ui" onclick="alert('DEX OPEN')">📁</button>
         </div>
-        <div class="viewport-center">
+        
+        <div class="viewport">
             <video id="live-feed" autoplay playsinline muted></video>
         </div>
-        <div class="right-panel">
-            <button class="btn-shutter" id="shutter"></button>
+
+        <div class="panel">
+            <button class="btn-red" id="shutter"></button>
         </div>
     </div>
+
     <script>
         const video = document.getElementById('live-feed');
+        // Force Landscape Lock if possible
+        if (screen.orientation) {
+            screen.orientation.lock('landscape').catch(() => {});
+        }
+
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
             .then(s => video.srcObject = s);
     </script>
