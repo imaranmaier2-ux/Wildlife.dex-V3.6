@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>WILDLIFE DEX // SMART CAM</title>
+    <title>WILDLIFE DEX // REGISTRY EDITION</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
@@ -15,17 +15,20 @@
         
         #camera-feed { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
         
+        /* UI OVERLAY */
         .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
         .hud-top { padding: 20px; display: flex; justify-content: space-between; align-items: flex-start; background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%); }
-        .status-box { background: rgba(18, 17, 16, 0.8); border: 1px solid #d7be9f; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 11px; color: #d7be9f; text-transform: uppercase; letter-spacing: 1px; backdrop-filter: blur(4px); }
+        .status-box { background: rgba(18, 17, 16, 0.8); border: 1px solid #d7be9f; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 11px; color: #d7be9f; text-transform: uppercase; letter-spacing: 1px; }
+        .btn-gallery-open { pointer-events: auto; background: #007aff; color: #fff; border: 1px solid #005bb5; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; }
         
         .crosshair-container { flex-grow: 1; display: flex; justify-content: center; align-items: center; }
         .crosshair { width: 180px; height: 180px; border: 2px dashed rgba(215, 190, 159, 0.4); position: relative; }
         
         .hud-bottom { padding: 30px 20px; background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, transparent 100%); display: flex; justify-content: center; align-items: center; }
-        .shutter-btn { pointer-events: auto; width: 80px; height: 80px; background-color: #ff3b30; border: 6px solid #e5e5ea; border-radius: 50%; cursor: pointer; box-shadow: 0 8px 16px rgba(0,0,0,0.6); }
+        .shutter-btn { pointer-events: auto; width: 80px; height: 80px; background-color: #ff3b30; border: 6px solid #e5e5ea; border-radius: 50%; cursor: pointer; transition: transform 0.1s; }
         .shutter-btn:active { transform: scale(0.92); }
 
+        /* SCAN RESULT CARD */
         .result-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(18, 17, 16, 0.95); z-index: 20; display: none; flex-direction: column; justify-content: center; align-items: center; padding: 20px; pointer-events: auto; }
         .tactile-card { background: #d7be9f; width: 100%; max-width: 400px; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
         .card-image-container { width: 100%; height: 220px; background: #000; }
@@ -36,18 +39,34 @@
         #result-confidence { font-size: 13px; font-weight: bold; opacity: 0.8; }
         
         .action-container { width: 100%; max-width: 400px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .btn { padding: 15px; border: none; font-size: 14px; font-weight: bold; border-radius: 8px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
-        .btn-main { background: #4cd964; color: #121110; }
+        .btn { padding: 12px; border: none; font-size: 12px; font-weight: bold; border-radius: 8px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
+        .btn-resume { background: #4cd964; color: #121110; grid-column: span 2; }
         .btn-override { background: #ffcc00; color: #121110; }
+        .btn-registry { background: #007aff; color: #fff; }
+
+        /* GALLERY OVERLAY */
+        .gallery-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #121110; z-index: 30; display: none; flex-direction: column; padding: 20px; pointer-events: auto; overflow-y: auto; }
+        .gallery-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .gallery-header h1 { margin: 0; font-size: 20px; color: #d7be9f; }
+        .btn-close-gallery { background: #ff3b30; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; }
+        .gallery-item { background: #222; border-radius: 8px; overflow: hidden; border: 1px solid #444; }
+        .gallery-item img { width: 100%; height: 100px; object-fit: cover; display: block; }
+        .gallery-item-name { padding: 8px; font-size: 10px; text-align: center; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* HIDDEN INFERENCE CANVAS FOR SPEED */
+        #inference-canvas { display: none; }
     </style>
 </head>
 <body>
 
     <video id="camera-feed" autoplay playsinline muted></video>
+    
+    <canvas id="inference-canvas" width="224" height="224"></canvas>
 
     <div class="ui-layer">
         <div class="hud-top">
-            <div class="status-box">MEMORY: <span id="memory-count" style="color:#4cd964">0 CUSTOM</span></div>
+            <button class="btn-gallery-open" id="btn-open-gallery">DEX GALLERY</button>
             <div class="status-box">AI: <span id="ai-status" style="color:#ffcc00">LOADING...</span></div>
         </div>
         <div class="crosshair-container"><div class="crosshair"></div></div>
@@ -58,15 +77,25 @@
         <div class="tactile-card">
             <div class="card-image-container"><canvas id="snapshot-canvas"></canvas></div>
             <div class="card-data">
-                <div class="card-header" id="match-type">STANDARD AI MATCH</div>
+                <div class="card-header" id="match-type">WAITING...</div>
                 <h1 id="result-title">ANALYZING...</h1>
-                <div id="result-confidence">Confidence: --%</div>
+                <div id="result-confidence">Processing...</div>
             </div>
         </div>
         <div class="action-container">
             <button class="btn btn-override" id="btn-override">CORRECT AI</button>
-            <button class="btn btn-main" id="btn-resume">RESUME</button>
+            <button class="btn btn-registry" id="btn-add-registry">ADD TO DEX</button>
+            <button class="btn btn-resume" id="btn-resume">RESUME SCANNING</button>
         </div>
+    </div>
+
+    <div class="gallery-overlay" id="gallery-screen">
+        <div class="gallery-header">
+            <h1>MY WILDLIFE DEX</h1>
+            <button class="btn-close-gallery" id="btn-close-gallery">CLOSE</button>
+        </div>
+        <div class="gallery-grid" id="gallery-grid">
+            </div>
     </div>
 
     <script>
@@ -74,126 +103,160 @@
         const btnScan = document.getElementById('btn-scan');
         const aiStatus = document.getElementById('ai-status');
         const resultScreen = document.getElementById('result-screen');
-        const canvas = document.getElementById('snapshot-canvas');
-        const ctx = canvas.getContext('2d');
+        const snapshotCanvas = document.getElementById('snapshot-canvas');
+        const inferenceCanvas = document.getElementById('inference-canvas');
         
         let model = null;
         let classifier = null;
         let lastActivation = null;
+        let currentThumbnail = null; // Stores the image for the gallery
 
-        // 1. Start Device Camera
         async function startCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
                 video.srcObject = stream;
-            } catch (err) { alert("Camera error: " + err.message); }
+            } catch (err) { alert("Camera error."); }
         }
 
-        // 2. Initialize Models & Load Saved Memory Bank
         async function loadModels() {
             try {
                 model = await mobilenet.load();
                 classifier = knnClassifier.create();
-                
-                // Load custom overrides from your phone's memory if they exist
                 if (localStorage.getItem('dex_custom_memory')) {
                     const dataset = JSON.parse(localStorage.getItem('dex_custom_memory'));
-                    Object.keys(dataset).forEach((key) => {
-                        dataset[key] = tf.tensor2d(dataset[key]);
-                    });
+                    Object.keys(dataset).forEach(key => dataset[key] = tf.tensor2d(dataset[key]));
                     classifier.setClassifierDataset(dataset);
-                    updateMemoryCount();
                 }
-
                 aiStatus.innerText = "ONLINE";
                 aiStatus.style.color = "#4cd964";
                 btnScan.disabled = false;
-            } catch (err) {
-                aiStatus.innerText = "ERROR";
-            }
+            } catch (err) { aiStatus.innerText = "ERROR"; }
         }
 
-        function updateMemoryCount() {
-            const numClasses = classifier.getNumClasses();
-            document.getElementById('memory-count').innerText = `${numClasses} OVERRIDES`;
-        }
-
-        // 3. Save Custom Memory Bank to Phone Storage
-        function saveMemoryToDisk() {
-            const dataset = classifier.getClassifierDataset();
-            const datasetObj = {};
-            Object.keys(dataset).forEach((key) => {
-                datasetObj[key] = dataset[key].arraySync();
-            });
-            localStorage.setItem('dex_custom_memory', JSON.stringify(datasetObj));
-            updateMemoryCount();
-        }
-
-        // 4. Capture & Classify
-        btnScan.addEventListener('click', async () => {
+        // --- SCANNING LOGIC WITH SPEED OPTIMIZATION ---
+        btnScan.addEventListener('click', () => {
             if (!model) return;
 
+            // 1. Instantly update UI so user knows it is working
             resultScreen.style.display = 'flex';
             document.getElementById('result-title').innerText = "SCANNING...";
+            document.getElementById('match-type').innerText = "PROCESSING";
+            document.getElementById('result-confidence').innerText = "Please wait...";
+            document.getElementById('btn-add-registry').innerText = "ADD TO DEX";
+            document.getElementById('btn-add-registry').disabled = false;
 
-            canvas.width = 480; // Scaled down for rapid memory processing
-            canvas.height = 480 * (video.videoHeight / video.videoWidth);
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            // 2. Capture High-Res for UI Polaroid
+            snapshotCanvas.width = video.videoWidth;
+            snapshotCanvas.height = video.videoHeight;
+            snapshotCanvas.getContext('2d').drawImage(video, 0, 0);
 
-            // Get intermediate feature layer from MobileNet (the object "fingerprint")
-            const infer = () => model.infer(video, true);
-            const activation = infer();
-            lastActivation = tf.keep(activation); // Keep in memory in case user hits override
+            // 3. Capture Low-Res Thumbnail for AI Speed & Gallery Storage
+            const infCtx = inferenceCanvas.getContext('2d');
+            infCtx.drawImage(video, 0, 0, 224, 224);
+            currentThumbnail = inferenceCanvas.toDataURL('image/jpeg', 0.5); // Highly compressed
 
-            // Check our custom memory bank first
-            if (classifier.getNumClasses() > 0) {
-                const res = await classifier.predictClass(activation);
-                if (res && res.confidence[res.label] > 0.65) { // 65% confidence threshold for custom memory
-                    document.getElementById('match-type').innerText = "LEARNED MEMORY MATCH";
-                    document.getElementById('result-title').innerText = res.label.toUpperCase();
-                    document.getElementById('result-confidence').innerText = `Confidence: ${Math.round(res.confidence[res.label] * 100)}%`;
-                    return;
+            // 4. Yield 50ms so phone can draw the UI, THEN run AI Math
+            setTimeout(async () => {
+                const infer = () => model.infer(inferenceCanvas, true);
+                lastActivation = tf.keep(infer());
+
+                if (classifier.getNumClasses() > 0) {
+                    const res = await classifier.predictClass(lastActivation);
+                    if (res && res.confidence[res.label] > 0.65) {
+                        displayResult("LEARNED MEMORY", res.label, res.confidence[res.label]);
+                        return;
+                    }
                 }
-            }
 
-            // Fallback to standard base AI model
-            try {
-                const predictions = await model.classify(video);
-                if (predictions && predictions.length > 0) {
-                    document.getElementById('match-type').innerText = "STANDARD AI MATCH";
-                    document.getElementById('result-title').innerText = predictions[0].className.split(',')[0];
-                    document.getElementById('result-confidence').innerText = `Confidence: ${Math.round(predictions[0].probability * 100)}%`;
-                } else {
-                    document.getElementById('result-title').innerText = "UNKNOWN OBJECT";
+                try {
+                    const predictions = await model.classify(inferenceCanvas);
+                    if (predictions.length > 0) {
+                        displayResult("AI MATCH", predictions[0].className.split(',')[0], predictions[0].probability);
+                    } else {
+                        displayResult("FAILED", "UNKNOWN OBJECT", 0);
+                    }
+                } catch (e) {
+                    displayResult("ERROR", "SCAN FAILED", 0);
                 }
-            } catch (e) {
-                document.getElementById('result-title').innerText = "SCAN ERROR";
+            }, 50); 
+        });
+
+        function displayResult(type, name, confidence) {
+            document.getElementById('match-type').innerText = type;
+            document.getElementById('result-title').innerText = name.toUpperCase();
+            document.getElementById('result-confidence').innerText = `Confidence: ${Math.round(confidence * 100)}%`;
+        }
+
+        // --- OVERRIDE LOGIC ---
+        document.getElementById('btn-override').addEventListener('click', () => {
+            if (!lastActivation) return;
+            const correctName = prompt("What is the correct name?");
+            if (correctName && correctName.trim() !== "") {
+                const cleanName = correctName.trim().toLowerCase();
+                classifier.addExample(lastActivation, cleanName);
+                
+                const dataset = classifier.getClassifierDataset();
+                const datasetObj = {};
+                Object.keys(dataset).forEach(key => datasetObj[key] = dataset[key].arraySync());
+                localStorage.setItem('dex_custom_memory', JSON.stringify(datasetObj));
+
+                displayResult("MEMORY SAVED", cleanName, 1);
             }
         });
 
-        // 5. Manual Override Button Logic
-        document.getElementById('btn-override').addEventListener('click', () => {
-            if (!lastActivation) return;
+        // --- REGISTRY LOGIC ---
+        document.getElementById('btn-add-registry').addEventListener('click', (e) => {
+            const itemName = document.getElementById('result-title').innerText;
+            
+            // Pull existing dex from phone memory
+            let registry = JSON.parse(localStorage.getItem('dex_registry')) || [];
+            
+            // Add new item with compressed thumbnail
+            registry.push({
+                name: itemName,
+                image: currentThumbnail,
+                date: new Date().toLocaleDateString()
+            });
 
-            const correctName = prompt("What is the correct name of this object?");
-            if (correctName && correctName.trim() !== "") {
-                const cleanName = correctName.trim().toLowerCase();
-                
-                // Add the current image fingerprint to our custom memory bank under the new name
-                classifier.addExample(lastActivation, cleanName);
-                saveMemoryToDisk();
+            // Save back to phone
+            localStorage.setItem('dex_registry', JSON.stringify(registry));
+            
+            e.target.innerText = "SAVED!";
+            e.target.disabled = true;
+        });
 
-                // Update UI immediately
-                document.getElementById('match-type').innerText = "NEW MEMORY RECORDEED!";
-                document.getElementById('result-title').innerText = cleanName.toUpperCase();
-                document.getElementById('result-confidence').innerText = "Confidence: 100% (Manual)";
+        // --- GALLERY UI LOGIC ---
+        document.getElementById('btn-open-gallery').addEventListener('click', () => {
+            const grid = document.getElementById('gallery-grid');
+            grid.innerHTML = ""; // Clear old
+            
+            const registry = JSON.parse(localStorage.getItem('dex_registry')) || [];
+            
+            if (registry.length === 0) {
+                grid.innerHTML = "<p style='color:#888; grid-column: 1 / -1;'>Your Dex is empty. Scan something!</p>";
+            } else {
+                // Reverse so newest is at the top
+                registry.reverse().forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'gallery-item';
+                    div.innerHTML = `
+                        <img src="${item.image}" alt="${item.name}">
+                        <div class="gallery-item-name">${item.name}</div>
+                    `;
+                    grid.appendChild(div);
+                });
             }
+            document.getElementById('gallery-screen').style.display = 'flex';
+        });
+
+        document.getElementById('btn-close-gallery').addEventListener('click', () => {
+            document.getElementById('gallery-screen').style.display = 'none';
         });
 
         document.getElementById('btn-resume').addEventListener('click', () => {
-            resultScreen.style.display = 'none';
+            document.getElementById('result-screen').style.display = 'none';
             if (lastActivation) {
-                lastActivation.dispose(); // Free graphics card memory
+                lastActivation.dispose();
                 lastActivation = null;
             }
         });
