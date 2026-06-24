@@ -119,17 +119,100 @@
 
     <script>
         const video = document.getElementById('embedded-live-video');
+        const statusVal = document.getElementById('hud-stat-value');
         let aiModel = null;
         let currentScanPayload = null;
 
-        // Initialize AI with smart loading
+        // Initialize AI with Timeout Fallback
         async function initAI() {
+            console.log("Loading AI...");
             try {
-                aiModel = await mobilenet.load();
-                document.getElementById('hud-stat-value').innerText = 'READY';
-                document.getElementById('hud-stat-value').style.color = '#4cd964';
-            } catch(e) { console.error("Neural core offline"); }
+                // Set a 5-second race timer
+                const timeout = new Promise((_, reject) => setTimeout(() => reject("AI_TIMEOUT"), 5000));
+                aiModel = await Promise.race([mobilenet.load(), timeout]);
+                statusVal.innerText = 'READY';
+                statusVal.style.color = '#4cd964';
+            } catch(e) { 
+                console.error("Neural core error:", e);
+                statusVal.innerText = 'OFFLINE';
+                statusVal.style.color = '#ff3b30';
+            }
         }
 
         // Camera Logic
-        navigator.mediaDevices.getUserMedia({video: {facingMode: "environment"}}).then(s => video.srcObject = s).then(init
+        navigator.mediaDevices.getUserMedia({video: {facingMode: "environment"}})
+            .then(s => video.srcObject = s)
+            .then(initAI)
+            .catch(err => {
+                console.error("Camera access denied:", err);
+                statusVal.innerText = 'NO CAMERA';
+            });
+
+        // Shutter Trigger with Confidence Threshold
+        document.getElementById('shutter-trigger').addEventListener('click', async () => {
+            const canvas = document.getElementById('canvas-snapshot-output');
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            document.getElementById('result-overlay').style.display = "grid";
+            document.getElementById('res-name').innerText = aiModel ? "ANALYZING..." : "SYSTEM OFFLINE";
+            
+            if (!aiModel) {
+                document.getElementById('res-fact').innerText = "AI core not loaded. Please manual override.";
+                return;
+            }
+            
+            await new Promise(r => setTimeout(r, 1200));
+            
+            let name = "INCONCLUSIVE", science = "SIGNAL WEAK", fact = "The neural core could not achieve a stable lock.";
+            
+            const manual = document.getElementById('manual-text-input').value.trim();
+            if (manual) {
+                name = manual.toUpperCase(); science = "MANUAL LOG"; fact = "Data entered by operator.";
+            } else {
+                const results = await aiModel.classify(canvas);
+                if (results.length > 0 && results[0].probability > 0.60) {
+                    name = results[0].className.toUpperCase();
+                    let conf = Math.round(results[0].probability * 100);
+                    science = `MATCH: ${conf}% CONFIDENCE`;
+                    fact = "Neural scan verified with high probability.";
+                }
+            }
+            
+            document.getElementById('res-name').innerText = name;
+            document.getElementById('res-science').innerText = science;
+            document.getElementById('res-fact').innerText = fact;
+            currentScanPayload = {name, science, fact, image: canvas.toDataURL()};
+        });
+
+        // Register Entry
+        document.getElementById('btn-log-dex').addEventListener('click', () => {
+            if(!currentScanPayload) return;
+            let db = JSON.parse(localStorage.getItem('wildlifeDexEntries') || '[]');
+            db.unshift(currentScanPayload);
+            localStorage.setItem('wildlifeDexEntries', JSON.stringify(db));
+            document.getElementById('result-overlay').style.display = "none";
+        });
+
+        // Gallery Display
+        document.getElementById('btn-open-dex').addEventListener('click', () => {
+            const cont = document.getElementById('dex-cards-container');
+            cont.innerHTML = "";
+            let entries = JSON.parse(localStorage.getItem('wildlifeDexEntries') || '[]');
+            if(entries.length === 0) cont.innerHTML = `<div class="empty-dex-notice">No specimens registered.</div>`;
+            entries.forEach(item => {
+                cont.innerHTML += `<div class="mini-polaroid-card"><img class="mini-polaroid-img" src="${item.image}"><div class="mini-polaroid-label">${item.name}</div></div>`;
+            });
+            document.getElementById('dex-gallery-screen').style.display = "flex";
+        });
+
+        document.getElementById('btn-close-gallery').addEventListener('click', () => {
+            document.getElementById('dex-gallery-screen').style.display = "none";
+        });
+
+        document.getElementById('btn-close-card').addEventListener('click', () => {
+            document.getElementById('result-overlay').style.display = "none";
+        });
+    </script>
+</body>
+</html>
