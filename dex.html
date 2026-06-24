@@ -2,105 +2,289 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dex Telemetry View</title>
+    <title>WILDLIFE DEX // TACTILE CAM V3.7</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+
     <style>
-        body { background-color: #121212; color: white; font-family: sans-serif; text-align: center; }
-        #camera-view { background: #000; border: 2px solid #333; margin: 10px auto; display: block; }
-        .controls { margin-top: 15px; }
-        input { padding: 8px; border-radius: 4px; border: 1px solid #555; }
-        button { padding: 8px 15px; background: #007BFF; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #0056b3; }
+        * {
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            background-color: #121110;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* --- 📐 RESPONSIVE GRID LAYOUT ENGINE --- */
+        .camera-container {
+            width: 100%;
+            height: 100%;
+            background-color: #d7be9f;
+            display: grid;
+            padding: 12px;
+            position: relative;
+            gap: 10px;
+            grid-template-columns: 140px 1fr;
+            grid-template-rows: 1fr;
+        }
+
+        @media (orientation: portrait) {
+            .camera-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 180px;
+            }
+        }
+
+        /* Viewport Display Monitor */
+        .viewport-wrapper {
+            position: relative;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 4px solid #2d2a26;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        video, canvas {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Tactile Mechanical Panel HUD */
+        .control-panel {
+            background-color: #23211f;
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 12px;
+            border: 3px solid #1a1817;
+        }
+
+        .status-readout {
+            background: #121110;
+            border: 1px solid #3a3733;
+            border-radius: 6px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 13px;
+            color: #00FF00;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: left;
+            min-height: 54px;
+        }
+
+        .override-box {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            background: #121110;
+            border: 2px solid #4a4540;
+            color: #fff;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: #d7be9f;
+        }
+
+        button {
+            width: 100%;
+            background: #9e2a2b;
+            color: #fff;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: 0 4px #5e191a;
+            transition: all 0.1s ease;
+        }
+
+        button:active {
+            box-shadow: 0 1px #5e191a;
+            transform: translateY(3px);
+        }
     </style>
 </head>
 <body>
 
-    <h1>System Dex View</h1>
-    
-    <canvas id="camera-view" width="400" height="300"></canvas>
-    
-    <h3 id="detection-status-text">Detected: Waiting for stream...</h3>
+    <div class="camera-container">
+        
+        <div class="viewport-wrapper">
+            <video id="webcam" autoplay playsinline muted></video>
+            <canvas id="analyzer-canvas"></canvas>
+        </div>
 
-    <div class="controls">
-        <input type="text" id="manual-override-input" placeholder="Type correct name (e.g., screw)">
-        <button id="btn-submit-override">Save Override</button>
+        <div class="control-panel">
+            <div class="status-readout" id="hud-display">
+                System status: Initializing AI Core...
+            </div>
+            
+            <div class="override-box">
+                <input type="text" id="manual-label-field" placeholder="OVERRIDE TARGET NAME...">
+                <button id="lock-signature-btn">Lock Vector Blueprint</button>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        // Connect UI elements to code variables
-        const cameraView = document.getElementById('camera-view'); 
-        const manualInput = document.getElementById('manual-override-input'); 
-        const submitOverrideBtn = document.getElementById('btn-submit-override'); 
-        const systemStatusDisplay = document.getElementById('detection-status-text'); 
-        const ctx = cameraView.getContext('2d');
+        const videoElement = document.getElementById('webcam');
+        const canvasElement = document.getElementById('analyzer-canvas');
+        const hudDisplay = document.getElementById('hud-display');
+        const manualInputField = document.getElementById('manual-label-field');
+        const lockBtn = document.getElementById('lock-signature-btn');
 
-        // Draw a placeholder block into the canvas view if you aren't streaming real hardware video yet
-        ctx.fillStyle = "#222";
-        ctx.fillRect(0, 0, cameraView.width, cameraView.height);
+        let netModel = null;
+        // In-memory array cache structure: { label: "screw", embedding: [numbers] }
+        let customMemoryBank = [];
 
-        /**
-         * Compresses the current image canvas frame down into raw file format data
-         */
-        function getFrameBlob() {
-            return new Promise((resolve) => {
-                cameraView.toBlob((blob) => { resolve(blob); }, 'image/jpeg', 0.85);
-            });
-        }
-
-        /**
-         * Automated background loop that pings the server with your feed frame
-         */
-        async function performLiveScan() {
-            const imageBlob = await getFrameBlob();
-            const formData = new FormData();
-            formData.append('image', imageBlob, 'frame.jpg');
-
-            try {
-                const response = await fetch('/api/scan', { method: 'POST', body: formData });
-                const data = await response.json();
-
-                // If the backend says this matches your saved item vector, paint it bright green
-                if (data.is_override) {
-                    systemStatusDisplay.innerText = `Matched: ${data.prediction} (Manual Lock-on)`;
-                    systemStatusDisplay.style.color = "#00FF00";
-                } else {
-                    systemStatusDisplay.innerText = `Detected: ${data.prediction}`;
-                    systemStatusDisplay.style.color = "#FFFFFF";
-                }
-            } catch (err) {
-                console.error("Scanning synchronization connection error:", err);
+        // Compute mathematical alignment vector distance (Cosine Similarity)
+        function calculateSimilarity(vectorA, vectorB) {
+            let dotProduct = 0.0;
+            let normA = 0.0;
+            let normB = 0.0;
+            for (let i = 0; i < vectorA.length; i++) {
+                dotProduct += vectorA[i] * vectorB[i];
+                normA += vectorA[i] * vectorA[i];
+                normB += vectorB[i] * vectorB[i];
             }
+            return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
         }
 
-        /**
-         * Code block that executes when you click the 'Save Override' UI button
-         */
-        submitOverrideBtn.addEventListener('click', async () => {
-            const customLabel = manualInput.value.trim();
-            if (!customLabel) return alert("Please type a valid item descriptor name first!");
-
-            const imageBlob = await getFrameBlob();
-            const formData = new FormData();
-            formData.append('image', imageBlob, 'override_frame.jpg');
-            formData.append('label', customLabel);
-
-            systemStatusDisplay.innerText = "Locking signature parameters into memory bank...";
-
+        // Initialize hardware assets and engine elements
+        async function initHardwareSystem() {
             try {
-                const response = await fetch('/api/override', { method: 'POST', body: formData });
-                const data = await response.json();
+                hudDisplay.innerText = "SYSTEM: Loading MobileNet layers...";
+                netModel = await mobilenet.load({ version: 1, alpha: 1.0 });
                 
-                if (data.status === "success") {
-                    manualInput.value = ""; // Clear input slot
-                    alert(data.message); // Displays verification popup confirmation
-                }
+                hudDisplay.innerText = "SYSTEM: Allocating telemetry stream...";
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: 640, height: 480 },
+                    audio: false
+                });
+                videoElement.srcObject = stream;
+                
+                hudDisplay.innerText = "SYSTEM: Status Nominal. Online.";
+                hudDisplay.style.color = "#00FF00";
+                
+                // Fire live compute processing loops
+                setInterval(processLiveTelemetry, 400);
             } catch (err) {
-                console.error("Failed to commit override data payload:", err);
+                hudDisplay.innerText = `HARDWARE FAULT: ${err.message}`;
+                hudDisplay.style.color = "#FF0000";
             }
+        }
+
+        async function processLiveTelemetry() {
+            if (!netModel || videoElement.readyState !== 4) return;
+
+            // 1. Core Feature Extraction Step (Turn image frame into math numbers)
+            const logits = tf.tidy(() => {
+                const webCamTensor = tf.browser.fromPixels(videoElement);
+                const resized = tf.image.resizeBilinear(webCamTensor, [224, 224]);
+                const batched = resized.expandDims(0);
+                // Extracting raw activation map vectors before classification maps it out
+                return netModel.model.infer(batched, 'conv_preds').squeeze();
+            });
+
+            const currentEmbedding = await logits.data();
+            logits.dispose();
+
+            // 2. Scan Local Smart Memory Bank First
+            let nearestMatch = null;
+            let highestSimilarity = -1.0;
+            const MATCH_STRICTNESS_THRESHOLD = 0.82; // Higher means it must look identical
+
+            customMemoryBank.forEach(memoryItem => {
+                const similarity = calculateSimilarity(currentEmbedding, memoryItem.embedding);
+                if (similarity > highestSimilarity) {
+                    highestSimilarity = similarity;
+                    nearestMatch = memoryItem.label;
+                }
+            });
+
+            // 3. Output Decision Matrix Engine Rules
+            if (highestSimilarity > MATCH_STRICTNESS_THRESHOLD) {
+                hudDisplay.innerText = `MATCH: ${nearestMatch}\nTYPE: Override (${Math.round(highestSimilarity * 100)}% match)`;
+                hudDisplay.style.color = "#00FF00";
+            } else {
+                // If it doesn't match your screw signature, use the standard classifier completely untouched!
+                const predictions = await netModel.classify(videoElement);
+                if (predictions && predictions.length > 0) {
+                    hudDisplay.innerText = `DETECT: ${predictions[0].className}\nCONF: ${Math.round(predictions[0].probability * 100)}%`;
+                    hudDisplay.style.color = "#FFFFFF";
+                }
+            }
+        }
+
+        // Action Trigger Button: Lock target look parameters directly into runtime memory
+        lockBtn.addEventListener('click', async () => {
+            const assignmentLabel = manualInputField.value.trim().toLowerCase();
+            if (!assignmentLabel) {
+                alert("FAULT: Field Empty. Type a target descriptor label string.");
+                return;
+            }
+
+            if (!netModel || videoElement.readyState !== 4) return;
+
+            hudDisplay.innerText = "LOCKING GEOMETRY PARAMETERS...";
+
+            // Capture specific frame data activation layer map
+            const logits = tf.tidy(() => {
+                const webCamTensor = tf.browser.fromPixels(videoElement);
+                const resized = tf.image.resizeBilinear(webCamTensor, [224, 224]);
+                const batched = resized.expandDims(0);
+                return netModel.model.infer(batched, 'conv_preds').squeeze();
+            });
+
+            const targetEmbedding = await logits.data();
+            logits.dispose();
+
+            // Push object to memory array cache
+            customMemoryBank.push({
+                label: assignmentLabel,
+                embedding: Array.from(targetEmbedding)
+            });
+
+            manualInputField.value = "";
+            alert(`SUCCESS: Visual fingerprint locked to label sequence [${assignmentLabel}].`);
         });
 
-        // Starts scanning the viewport every 500 milliseconds automatically
-        setInterval(performLiveScan, 500);
+        // Run boot layer sequence initialization
+        window.addEventListener('load', initHardwareSystem);
     </script>
 </body>
 </html>
