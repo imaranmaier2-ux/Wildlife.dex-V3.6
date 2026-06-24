@@ -123,59 +123,43 @@
         let aiModel = null;
         let currentScanPayload = null;
 
-        // Initialize AI with Timeout Fallback
         async function initAI() {
-            console.log("Loading AI...");
             try {
-                // Set a 5-second race timer
-                const timeout = new Promise((_, reject) => setTimeout(() => reject("AI_TIMEOUT"), 5000));
-                aiModel = await Promise.race([mobilenet.load(), timeout]);
+                aiModel = await mobilenet.load();
                 statusVal.innerText = 'READY';
                 statusVal.style.color = '#4cd964';
             } catch(e) { 
-                console.error("Neural core error:", e);
-                statusVal.innerText = 'OFFLINE';
-                statusVal.style.color = '#ff3b30';
+                statusVal.innerText = 'CORE ERR';
             }
         }
 
-        // Camera Logic
         navigator.mediaDevices.getUserMedia({video: {facingMode: "environment"}})
             .then(s => video.srcObject = s)
-            .then(initAI)
-            .catch(err => {
-                console.error("Camera access denied:", err);
-                statusVal.innerText = 'NO CAMERA';
-            });
+            .then(initAI);
 
-        // Shutter Trigger with Confidence Threshold
         document.getElementById('shutter-trigger').addEventListener('click', async () => {
             const canvas = document.getElementById('canvas-snapshot-output');
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
             
             document.getElementById('result-overlay').style.display = "grid";
-            document.getElementById('res-name').innerText = aiModel ? "ANALYZING..." : "SYSTEM OFFLINE";
+            document.getElementById('res-name').innerText = "ANALYZING...";
             
-            if (!aiModel) {
-                document.getElementById('res-fact').innerText = "AI core not loaded. Please manual override.";
-                return;
-            }
+            await new Promise(r => setTimeout(r, 800));
             
-            await new Promise(r => setTimeout(r, 1200));
-            
-            let name = "INCONCLUSIVE", science = "SIGNAL WEAK", fact = "The neural core could not achieve a stable lock.";
+            let name = "UNKNOWN", science = "UNVERIFIED", fact = "The neural core requires better light or proximity.";
             
             const manual = document.getElementById('manual-text-input').value.trim();
             if (manual) {
                 name = manual.toUpperCase(); science = "MANUAL LOG"; fact = "Data entered by operator.";
-            } else {
+            } else if (aiModel) {
                 const results = await aiModel.classify(canvas);
-                if (results.length > 0 && results[0].probability > 0.60) {
+                // Lowered threshold to 25% (0.25) to catch more objects
+                if (results.length > 0 && results[0].probability > 0.25) {
                     name = results[0].className.toUpperCase();
                     let conf = Math.round(results[0].probability * 100);
                     science = `MATCH: ${conf}% CONFIDENCE`;
-                    fact = "Neural scan verified with high probability.";
+                    fact = "Data processed from neural streams.";
                 }
             }
             
@@ -185,7 +169,6 @@
             currentScanPayload = {name, science, fact, image: canvas.toDataURL()};
         });
 
-        // Register Entry
         document.getElementById('btn-log-dex').addEventListener('click', () => {
             if(!currentScanPayload) return;
             let db = JSON.parse(localStorage.getItem('wildlifeDexEntries') || '[]');
@@ -194,7 +177,6 @@
             document.getElementById('result-overlay').style.display = "none";
         });
 
-        // Gallery Display
         document.getElementById('btn-open-dex').addEventListener('click', () => {
             const cont = document.getElementById('dex-cards-container');
             cont.innerHTML = "";
