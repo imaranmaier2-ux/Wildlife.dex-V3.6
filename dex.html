@@ -286,5 +286,130 @@
         // Run boot layer sequence initialization
         window.addEventListener('load', initHardwareSystem);
     </script>
+   // ... your old manual override event listener block ends right here ...
+        manualInputField.value = "";
+        alert(`SUCCESS: Visual fingerprint locked to label sequence [${assignmentLabel}].`);
+    }); // This closes your button's event listener
+
+    // =========================================================================
+    // 🧠 TACTILE DEX ML ENGINE // LOCAL FEW-SHOT SCANNER BACKEND
+    // =========================================================================
+
+    // 1. HARDWARE ELEMENT TARGETS
+    const videoElement = document.getElementById('webcam') || document.querySelector('video');
+    const hudDisplay = document.getElementById('hud-display') || document.getElementById('detection-status-text');
+    const manualInputField = document.getElementById('manual-label-field') || document.getElementById('manual-override-input');
+    const lockBtn = document.getElementById('lock-signature-btn') || document.getElementById('btn-submit-override');
+
+    let netModel = null;
+    let customMemoryBank = []; 
+
+    // Calculate mathematical alignment vector distance (Cosine Similarity)
+    function calculateSimilarity(vectorA, vectorB) {
+        let dotProduct = 0.0;
+        let normA = 0.0;
+        let normB = 0.0;
+        for (let i = 0; i < vectorA.length; i++) {
+            dotProduct += vectorA[i] * vectorB[i];
+            normA += vectorA[i] * vectorA[i];
+            normB += vectorB[i] * vectorB[i];
+        }
+        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+    }
+
+    // Boot up AI system layers
+    async function initDexEngine() {
+        try {
+            if (hudDisplay) hudDisplay.innerText = "DEX CORE: INITIALIZING AI...";
+            netModel = await mobilenet.load({ version: 1, alpha: 1.0 });
+            
+            if (hudDisplay) {
+                hudDisplay.innerText = "DEX CORE: NOMINAL SYSTEM READY";
+                hudDisplay.style.color = "#00FF00";
+            }
+            
+            // Start the automated live scanner processing layer loop
+            setInterval(processLiveTelemetry, 400);
+        } catch (err) {
+            if (hudDisplay) hudDisplay.innerText = `CORE EXCEPTION: ${err.message}`;
+        }
+    }
+
+    // Background stream checking loop
+    async function processLiveTelemetry() {
+        if (!netModel || !videoElement || videoElement.readyState !== 4) return;
+
+        const logits = tf.tidy(() => {
+            const webCamTensor = tf.browser.fromPixels(videoElement);
+            const resized = tf.image.resizeBilinear(webCamTensor, [224, 224]);
+            const batched = resized.expandDims(0);
+            return netModel.model.infer(batched, 'conv_preds').squeeze();
+        });
+
+        const currentEmbedding = await logits.data();
+        logits.dispose();
+
+        let nearestMatch = null;
+        let highestSimilarity = -1.0;
+        const MATCH_THRESHOLD = 0.82; 
+
+        customMemoryBank.forEach(memoryItem => {
+            const similarity = calculateSimilarity(currentEmbedding, memoryItem.embedding);
+            if (similarity > highestSimilarity) {
+                highestSimilarity = similarity;
+                nearestMatch = memoryItem.label;
+            }
+        });
+
+        if (highestSimilarity > MATCH_THRESHOLD) {
+            if (hudDisplay) {
+                hudDisplay.innerText = `LOCK-ON: ${nearestMatch.toUpperCase()}\n[Manual Override Match]`;
+                hudDisplay.style.color = "#00FF00";
+            }
+            // 💡 Kids card generation bridge hook goes right here!
+        } else {
+            const predictions = await netModel.classify(videoElement);
+            if (predictions && predictions.length > 0) {
+                if (hudDisplay) {
+                    hudDisplay.innerText = `DETECT: ${predictions[0].className.split(',')[0].toUpperCase()}\nCONF: ${Math.round(predictions[0].probability * 100)}%`;
+                    hudDisplay.style.color = "#FFFFFF";
+                }
+            }
+        }
+    }
+
+    // Action Trigger Button: Lock parameters directly into memory array
+    if (lockBtn) {
+        lockBtn.addEventListener('click', async () => {
+            const assignmentLabel = manualInputField ? manualInputField.value.trim().toLowerCase() : '';
+            if (!assignmentLabel) return alert("INPUT ERROR: Type a targeted label name first.");
+            if (!netModel || videoElement.readyState !== 4) return;
+
+            if (hudDisplay) hudDisplay.innerText = "CAPTURING VISUAL BLUEPRINT...";
+
+            const logits = tf.tidy(() => {
+                const webCamTensor = tf.browser.fromPixels(videoElement);
+                const resized = tf.image.resizeBilinear(webCamTensor, [224, 224]);
+                const batched = resized.expandDims(0);
+                return netModel.model.infer(batched, 'conv_preds').squeeze();
+            });
+
+            const targetEmbedding = await logits.data();
+            logits.dispose();
+
+            customMemoryBank.push({
+                label: assignmentLabel,
+                embedding: Array.from(targetEmbedding)
+            });
+
+            if (manualInputField) manualInputField.value = "";
+            alert(`LEARNING SYSTEM: This specific object is now memorized as "${assignmentLabel}".`);
+        });
+    }
+
+    // Run boot layer sequence initialization
+    window.addEventListener('load', initDexEngine);
+
+</script>
 </body>
 </html>
